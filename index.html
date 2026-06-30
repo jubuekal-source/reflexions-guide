@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="de" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reflexions-Navigator · GetCon</title>
+<style>
+  /* ---------- THEMING ---------- */
+  :root, [data-theme="dark"]{
+    --bg:#0e1a21; --card:#16262e; --card-2:#1c2f38; --ink:#eaf0f3; --muted:#9fb3bc;
+    --line:#284048; --brand:#2d83b0; --brand-700:#246f97; --brand-ink:#ffffff;
+    --header:#0b212c; --soft:#16323f;
+    --prep:#4f9be0; --live:#36b97f; --reflect:#e89c4f;
+    --oeffnen:#4aa3cf; --verstehen:#b07ab6; --ressourcen:#36b97f; --transfer:#e89c4f;
+    --shadow:0 4px 18px rgba(0,0,0,.35);
+  }
+  [data-theme="light"]{
+    --bg:#F5F3EE; --card:#FFFFFF; --card-2:#f6f4ef; --ink:#1c2b33; --muted:#5b6b73;
+    --line:#e3ddd2; --brand:#11445F; --brand-700:#0d3548; --brand-ink:#ffffff;
+    --header:#11445F; --soft:#eef3f1;
+    --prep:#2f6db0; --live:#2e9e6b; --reflect:#d98a3d;
+    --oeffnen:#3a86b5; --verstehen:#9a5ea1; --ressourcen:#2e9e6b; --transfer:#d98a3d;
+    --shadow:0 2px 10px rgba(17,68,95,.08);
+  }
+  :root{--radius:16px; --maxw:880px;}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); line-height:1.5; -webkit-font-smoothing:antialiased; transition:background .25s,color .25s}
+  h1,h2,h3{margin:0 0 .3em; line-height:1.25}
+  p{margin:.2em 0 .8em}
+  button{font-family:inherit; cursor:pointer; border:none; color:inherit}
+  textarea{background:var(--card-2); color:var(--ink); border:1px solid var(--line)}
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 18px 80px}
+
+  /* ---------- HEADER + STEPPER NAV ---------- */
+  header.app{background:var(--header); color:#fff; padding:10px 0; position:sticky; top:0; z-index:20; box-shadow:var(--shadow); border-bottom:3px solid transparent; transition:border-color .25s}
+  body[data-section="start"]   header.app{border-bottom-color:var(--brand)}
+  body[data-section="prep"]    header.app{border-bottom-color:var(--prep)}
+  body[data-section="live"]    header.app{border-bottom-color:var(--live)}
+  body[data-section="reflect"] header.app{border-bottom-color:var(--reflect)}
+  body[data-section="teilen"]  header.app{border-bottom-color:#8a63d2}
+  header.app .wrap{display:flex; align-items:center; gap:10px; padding-bottom:0; padding-top:0}
+  .logo{background:transparent; font-weight:800; font-size:1rem; display:flex; align-items:center; gap:7px; cursor:pointer; white-space:nowrap; color:#fff; flex:none; padding:4px 2px}
+  .logo .home{font-size:1.25rem; line-height:1}
+  .stepnav{display:flex; align-items:center; gap:3px; overflow-x:auto; flex:1; min-width:0; scrollbar-width:none}
+  .stepnav::-webkit-scrollbar{display:none}
+  .snav{background:rgba(255,255,255,.10); color:#fff; padding:7px 12px; border-radius:999px; font-size:.82rem; font-weight:600; opacity:.85; white-space:nowrap; display:flex; align-items:center; gap:6px}
+  .snav .si{font-size:1rem; line-height:1}
+  .snav.active{opacity:1}
+  .snav.home.active{background:var(--brand); color:#fff}
+  .snav.prep.active{background:var(--prep); color:#fff}
+  .snav.live.active{background:var(--live); color:#fff}
+  .snav.reflect.active{background:var(--reflect); color:#fff}
+  .snav.teilen.active{background:#8a63d2; color:#fff}
+  .chev{color:rgba(255,255,255,.38); font-size:.9rem}
+  .hdr-actions{display:flex; align-items:center; gap:6px; flex:none; margin-left:auto}
+  .iconbtn{background:rgba(255,255,255,.14); color:#fff; width:34px; height:34px; border-radius:50%; font-size:1rem; display:flex; align-items:center; justify-content:center; flex:none}
+  .iconbtn:hover{background:rgba(255,255,255,.26)}
+  .iconbtn.reset{background:#e05656; font-weight:800}
+  .iconbtn.reset:hover{background:#c93f3f}
+  @media(max-width:560px){ .snav .sl{display:none} .logo .logotxt{display:none} }
+
+  /* ---------- GENERIC ---------- */
+  .screen{display:none; padding-top:24px}
+  .screen.active{display:block; animation:fade .25s ease}
+  @keyframes fade{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:none}}
+  .eyebrow{font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.8px}
+  .lead{color:var(--muted); max-width:62ch}
+  .micon{font-size:1.15rem}
+  /* Info-Toggle (Erklärtext auf-/zuklappbar, klar als anklickbar erkennbar) */
+  .infotgl{display:inline-flex; align-items:center; gap:8px; background:var(--soft); color:var(--ink); border:1.5px solid var(--line); border-radius:999px; padding:8px 14px; font-size:.85rem; font-weight:700; margin:2px 0 4px}
+  .infotgl:hover{border-color:var(--brand)}
+  .infotgl .chevd{transition:transform .2s; font-size:.8rem}
+  .infotgl.open .chevd{transform:rotate(180deg)}
+  .infobox{background:var(--card); border-left:4px solid var(--line); border-radius:10px; padding:12px 14px; margin:10px 0 4px; color:var(--muted); font-size:.92rem; max-width:64ch}
+  body[data-section="prep"]    .infobox{border-left-color:var(--prep)}
+  body[data-section="live"]    .infobox{border-left-color:var(--live)}
+  body[data-section="reflect"] .infobox{border-left-color:var(--reflect)}
+  .pill{display:inline-block; padding:2px 9px; border-radius:999px; font-size:.72rem; font-weight:700}
+  .badge{display:inline-block; padding:2px 8px; border-radius:6px; font-size:.7rem; font-weight:600; background:var(--soft); color:var(--muted); margin-right:6px}
+  .btn{background:var(--brand); color:var(--brand-ink); padding:12px 20px; border-radius:12px; font-weight:700; font-size:.95rem}
+  .btn:hover{background:var(--brand-700)}
+  .btn.ghost{background:transparent; color:var(--brand); border:1.5px solid var(--brand)}
+  .btn.sm{padding:8px 14px; font-size:.85rem}
+  .btn.lg{padding:14px 24px; font-size:1rem}
+  .row{display:flex; gap:12px; flex-wrap:wrap; align-items:center}
+  .spacer{flex:1}
+  .linklike{background:none; color:var(--muted); font-size:.8rem; text-decoration:underline; padding:4px 0}
+  .linklike:hover{color:var(--ink)}
+
+  .hero{background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:30px; margin-bottom:18px}
+  .modes{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+  .mode{background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:20px; text-align:left; border-top:5px solid var(--line); transition:transform .12s}
+  .mode:hover{transform:translateY(-3px)}
+  .mode.p1{border-top-color:var(--prep)} .mode.p2{border-top-color:var(--live)} .mode.p3{border-top-color:var(--reflect)}
+  .mode .num{font-size:.75rem;font-weight:700;color:var(--muted)}
+  .mode h3{font-size:1.05rem}
+  .mode p{font-size:.86rem;color:var(--muted);margin-bottom:0}
+  @media(max-width:680px){.modes{grid-template-columns:1fr}}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; margin-top:18px}
+  .tcard{background:var(--card); border:2px solid var(--line); border-radius:14px; padding:14px; text-align:left; display:flex; gap:10px; align-items:flex-start; transition:.12s}
+  .tcard:hover{border-color:var(--prep)}
+  .tcard.on{border-color:var(--prep); background:var(--soft); box-shadow:0 0 0 2px var(--prep)}
+  .tcard .ic{font-size:1.4rem; line-height:1}
+  .tcard .nm{font-weight:700; font-size:.92rem}
+  .tcard .df{font-size:.76rem; color:var(--muted); margin-top:2px}
+  .tcard .check{margin-left:auto; color:var(--prep); font-weight:800; opacity:0}
+  .tcard.on .check{opacity:1}
+  .stub{font-size:.66rem; color:var(--reflect); font-weight:700; opacity:.8}
+
+  /* ---------- LIVE ---------- */
+  .obsgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:14px; margin-top:18px}
+  .obs{background:var(--card); border:2px solid var(--line); border-radius:16px; padding:16px; text-align:left; transition:.12s}
+  .obs .head{cursor:pointer}
+  .obs:hover{border-color:var(--live)}
+  .obs.on{border-color:var(--live); background:var(--soft); box-shadow:0 0 0 2px var(--live)}
+  .obs .lbl{font-weight:700; font-size:1.02rem; display:block}
+  .obs .sub{font-size:.76rem; color:var(--muted); display:flex; align-items:center; gap:6px; margin-top:4px}
+  .obs .note{margin-top:10px; width:100%; border-radius:10px; padding:8px; font-size:.85rem; resize:vertical; min-height:40px; display:none; font-family:inherit}
+  .obs.on .note{display:block}
+  .counter{position:sticky; bottom:14px; background:var(--brand); color:var(--brand-ink); border-radius:14px; padding:12px 16px; margin-top:22px; display:flex; align-items:center; gap:10px; box-shadow:var(--shadow)}
+  .counter .fwd{background:#fff; color:var(--brand)}
+
+  /* ---------- REFLEXION ---------- */
+  .agenda{display:flex; flex-direction:column; gap:10px; margin-top:18px; scroll-margin-top:78px}
+  .aitem{background:var(--card); border-radius:12px; box-shadow:var(--shadow); padding:14px 16px; display:flex; align-items:center; gap:12px}
+  .aitem .ic{font-size:1.3rem}
+  .aitem .nm{font-weight:700}
+  .aitem .nt{font-size:.78rem; color:var(--muted)}
+  .aitem .done{color:var(--ressourcen); font-weight:700; font-size:.8rem}
+  .bookend{background:var(--card-2); border:1px dashed var(--reflect); border-radius:14px; padding:18px; margin:16px 0}
+  .bookend .eyebrow{color:var(--reflect)}
+  .bookend .uq{font-size:1.05rem; font-weight:600; margin:6px 0 10px}
+  .bookctl{display:flex; gap:8px; flex-wrap:wrap; align-items:center}
+  .bookctl .btn.on{background:var(--reflect); color:#fff}
+  .uniused{font-size:.74rem; color:var(--muted); margin-left:auto}
+  .uniopt{margin-top:12px; border-top:1px dashed var(--line); padding-top:10px}
+  .uniopt label{font-size:.82rem; font-weight:600; display:flex; gap:8px; align-items:center; cursor:pointer}
+  .uniopt textarea{width:100%; border-radius:10px; padding:9px; font-size:.88rem; min-height:44px; resize:vertical; font-family:inherit; margin-top:8px}
+  /* Herkunfts-Icons in der Agenda */
+  .orig{display:inline-flex; align-items:center; gap:4px; font-size:.7rem; font-weight:700; padding:2px 8px; border-radius:999px; background:rgba(54,185,127,.16); color:var(--live); white-space:nowrap}
+  .orig .gi{filter:drop-shadow(0 0 3px var(--live))}
+  .origs{display:flex; gap:6px; flex-wrap:wrap; margin-top:4px}
+  .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:.76rem; color:var(--muted); margin:4px 0 14px}
+  .legend .orig{font-size:.7rem}
+  .grouphd{font-size:.82rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.6px; margin:20px 0 6px}
+  .groupnote{font-size:.82rem; color:var(--muted); background:var(--soft); border-radius:10px; padding:9px 12px; margin:0 0 12px}
+
+  .stepper{display:flex; gap:6px; margin:6px 0 18px; flex-wrap:wrap}
+  .step{flex:1; min-width:120px; text-align:center; padding:8px 6px; border-radius:10px; font-size:.78rem; font-weight:700; background:var(--soft); color:var(--muted)}
+  .step.active{color:#fff}
+  .step.oeffnen.active{background:var(--oeffnen)} .step.verstehen.active{background:var(--verstehen)}
+  .step.ressourcen.active{background:var(--ressourcen)} .step.transfer.active{background:var(--transfer)}
+  .step.done{background:var(--soft); color:var(--ressourcen); box-shadow:inset 0 0 0 1.5px var(--ressourcen)}
+  .notepin{background:var(--card-2); border:1px solid var(--reflect); border-radius:12px; padding:12px 14px; margin-bottom:14px; font-size:.9rem}
+  .notepin .eyebrow{color:var(--reflect)}
+  .q{background:var(--card); border-radius:14px; box-shadow:var(--shadow); padding:18px; margin-bottom:14px; border-left:5px solid var(--line)}
+  .q.oeffnen{border-left-color:var(--oeffnen)} .q.verstehen{border-left-color:var(--verstehen)}
+  .q.ressourcen{border-left-color:var(--ressourcen)} .q.transfer{border-left-color:var(--transfer)}
+  .q .qtext{font-size:1.1rem; font-weight:600; margin-bottom:8px}
+  .q .meta{display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin-bottom:6px}
+  .q .hint{font-size:.82rem; color:var(--muted); background:var(--card-2); border-radius:8px; padding:8px 10px; margin-top:8px}
+  .q.picked{border-left-width:5px; box-shadow:0 0 0 2px var(--reflect)}
+  .pickbtn{margin-left:auto; flex:none; background:var(--soft); color:var(--muted); border:1.5px solid var(--line); border-radius:999px; padding:6px 12px; font-size:.78rem; font-weight:700; white-space:nowrap; display:inline-flex; align-items:center; gap:6px}
+  .q.picked .pickbtn{background:var(--reflect); color:#fff; border-color:var(--reflect)}
+  .qnote{margin-top:10px}
+  .qnote label{font-size:.76rem; font-weight:700; color:var(--reflect); display:block; margin-bottom:5px}
+  .qnote textarea{width:100%; border-radius:10px; padding:9px; font-size:.88rem; min-height:46px; resize:vertical; font-family:inherit}
+  .phasehdr{font-size:.82rem; color:var(--muted); margin:2px 0 10px}
+  .srcbtn{background:none; color:var(--brand); font-size:.76rem; font-weight:700; text-decoration:underline; padding:2px 0}
+  .src{display:none; font-size:.78rem; color:var(--muted); margin-top:6px; border-top:1px dashed var(--line); padding-top:6px}
+  .src.show{display:block}
+  .phasenote{background:var(--card); border-radius:14px; box-shadow:var(--shadow); padding:16px; margin:6px 0 4px; border-left:5px solid var(--muted)}
+  .phasenote label{font-size:.8rem; font-weight:700; color:var(--muted); display:block; margin-bottom:6px}
+  .phasenote textarea{width:100%; border-radius:10px; padding:10px; font-size:.9rem; min-height:60px; resize:vertical; font-family:inherit}
+
+  .privacy{font-size:.78rem; color:var(--muted); background:var(--soft); border-radius:10px; padding:10px 12px; margin-top:14px; display:flex; gap:8px; align-items:flex-start}
+  .empty{background:var(--card); border-radius:12px; padding:20px; text-align:center; color:var(--muted); box-shadow:var(--shadow)}
+  footer{text-align:center; color:var(--muted); font-size:.74rem; padding:30px 0}
+
+  /* ---------- MODAL ---------- */
+  .overlay{position:fixed; inset:0; background:rgba(0,0,0,.55); display:none; align-items:center; justify-content:center; z-index:50; padding:18px}
+  .overlay.show{display:flex}
+  .modal{background:var(--card); border-radius:18px; max-width:680px; width:100%; max-height:86vh; overflow:auto; padding:24px; box-shadow:var(--shadow)}
+  .modal textarea{width:100%; min-height:240px; border-radius:12px; padding:12px; font-size:.9rem; font-family:ui-monospace,Menlo,Consolas,monospace; line-height:1.5}
+</style>
+</head>
+<body>
+<header class="app">
+  <div class="wrap">
+    <button class="logo" data-go="start" title="Zur Startseite"><span class="home">🧭</span> <span class="logotxt">Navigator</span></button>
+    <nav class="stepnav">
+      <button class="snav home" data-go="start"><span class="si">🏠</span><span class="sl">Start</span></button>
+      <span class="chev">›</span>
+      <button class="snav prep" data-go="prep"><span class="si">🎯</span><span class="sl">Vorbereitung</span></button>
+      <span class="chev">›</span>
+      <button class="snav live" data-go="live"><span class="si">🔍</span><span class="sl">Live</span></button>
+      <span class="chev">›</span>
+      <button class="snav reflect" data-go="reflect"><span class="si">💬</span><span class="sl">Reflexion</span></button>
+      <span class="chev">›</span>
+      <button class="snav teilen" id="shareNav"><span class="si">📤</span><span class="sl">Teilen</span></button>
+    </nav>
+    <div class="hdr-actions">
+      <button class="iconbtn reset" id="resetBtn" title="Alles auf diesem Gerät zurücksetzen">✕</button>
+      <button class="iconbtn" id="themeToggle" title="Hell / Dunkel umschalten">☀️</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- START -->
+  <section id="start" class="screen active">
+    <div class="hero">
+      <div class="eyebrow" style="color:var(--brand)">GetCon · Teamreflexion</div>
+      <h1>Vom beobachteten Moment zur klaren Reflexion.</h1>
+      <p class="lead">Der Navigator führt dich in drei Schritten: vorab grob die Ziele sortieren, während der Übung locker beobachten, danach geführt reflektieren – immer nur wenige starke Fragen, nie eine Fragenwand. Für teamführungs-erfahrene Personen, kein Trainerschein nötig.</p>
+      <p class="lead" style="margin-bottom:0">Tippe unten auf einen Schritt, um zu starten – am besten mit der <b>Vorbereitung</b>.</p>
+    </div>
+    <div class="modes">
+      <button class="mode p1" data-go="prep"><div class="num">SCHRITT 1 · optional</div><h3><span class="micon">🎯</span> Vorbereitung</h3><p>Vorab angepeilte Themen abhaken – als Orientierung, nicht als Einschränkung.</p></button>
+      <button class="mode p2" data-go="live"><div class="num">SCHRITT 2 · zentral</div><h3><span class="micon">🔍</span> Live-Beobachtung</h3><p>Während der Übung antippen, was passiert. Kurze Notizen – bleiben auf dem Gerät.</p></button>
+      <button class="mode p3" data-go="reflect"><div class="num">SCHRITT 3</div><h3><span class="micon">💬</span> Reflexion</h3><p>Das Beobachtete wird zur Agenda. Pro Thema ein geführter Bogen bis zum nächsten Schritt.</p></button>
+    </div>
+    <div class="privacy">🔒 <span>Alle Notizen werden ausschließlich lokal in diesem Browser gespeichert (on-device). Kein Server, keine Cloud, kein Datenaustausch – DSGVO-konform.</span></div>
+  </section>
+
+  <!-- PREP -->
+  <section id="prep" class="screen">
+    <div class="eyebrow" style="color:var(--prep)">Schritt 1 · optional</div>
+    <h1>Was wollt ihr heute anpeilen?</h1>
+    <button class="infotgl" data-info="prepInfo">ℹ️ Wie funktioniert diese Seite? <span class="chevd">▾</span></button>
+    <div class="infobox" id="prepInfo" hidden>Hake die Themen ab, die das Team bearbeiten möchte. Das sortiert nur vor – im Live-Modus bleibt alles erreichbar. Reihenfolge nach den am häufigsten gewünschten Teamzielen (Vorschlag).</div>
+    <div class="grouphd">Reflexions-Themen</div>
+    <div id="prepGrid" class="grid"></div>
+    <div class="grouphd">Sonderformate</div>
+    <div class="groupnote">Andere Kategorie als die Reflexions-Themen: <b>Energie/Auflockerung</b> ist ein kurzer Energizer (Stimmung aktivieren, kaum Reflexion). <b>Transfer in den Alltag</b> steckt ohnehin schon in jeder Reflexion (Phase 4) und in der Universal-Abschlussfrage – als eigenes Thema nur wählen, wenn ihr einen ganzen Block dem Übertragen widmen wollt.</div>
+    <div id="prepGridSonder" class="grid"></div>
+    <div class="row" style="margin-top:22px">
+      <span id="prepCount" class="badge">0 ausgewählt</span><div class="spacer"></div>
+      <button class="btn" data-go="live">Weiter zur Live-Beobachtung →</button>
+    </div>
+  </section>
+
+  <!-- LIVE -->
+  <section id="live" class="screen">
+    <div class="eyebrow" style="color:var(--live)">Schritt 2 · während der Übung</div>
+    <h1>Was beobachtest du gerade?</h1>
+    <button class="infotgl" data-info="liveInfo">ℹ️ Wie funktioniert diese Seite? <span class="chevd">▾</span></button>
+    <div class="infobox" id="liveInfo" hidden>Locker antippen, sobald dir etwas auffällt – mehreres gleichzeitig ist normal. Optional eine kurze Notiz als Gedächtnisstütze. Diese Markierungen sind später deine Reflexions-Agenda. Zum Löschen das rote ✕ oben rechts.</div>
+    <div id="obsGrid" class="obsgrid"></div>
+    <div class="counter">
+      <span>🔍</span><strong id="obsCount">0</strong><span>markiert</span>
+      <div class="spacer"></div>
+      <button class="btn sm fwd" data-go="reflect">Weiter zur Reflexion →</button>
+    </div>
+  </section>
+
+  <!-- REFLECT: agenda -->
+  <section id="reflect" class="screen">
+    <div class="eyebrow" style="color:var(--reflect)">Schritt 3 · nach der Übung</div>
+    <h1>Eure Reflexions-Agenda</h1>
+    <button class="infotgl" data-info="reflectInfo">ℹ️ Wie funktioniert diese Seite? <span class="chevd">▾</span></button>
+    <div class="infobox" id="reflectInfo" hidden>Pro Thema führt dich ein Bogen durch die vier Phasen (Öffnen → Verstehen → Ressourcen → Transfer). Du musst nicht alle Fragen stellen – wähle die passenden aus und halte direkt darunter eine Notiz fest. Nur die so gewählten Fragen + Notizen landen am Ende in der Team-Zusammenfassung. Deine privaten Live-Notizen bleiben auf dem Gerät.</div>
+
+    <div class="bookend" id="bookStartBox">
+      <div class="eyebrow">Universal-Einstieg · direkt nach der Übung</div>
+      <p class="uq" id="bookStartText"></p>
+      <div class="bookctl">
+        <button class="btn ghost sm" id="bsCycle">↻ andere Frage</button>
+        <button class="btn sm" id="bsPick">+ gefragt</button>
+        <span class="uniused" id="bsUsed"></span>
+      </div>
+    </div>
+
+    <div class="legend">
+      <span class="orig"><span class="gi">🎯</span> aus deiner Vorbereitung</span>
+      <span class="orig"><span class="gi">🔍</span> live beobachtet</span>
+    </div>
+    <div id="agenda" class="agenda"></div>
+    <div id="agendaEmpty" class="empty" style="display:none">Noch nichts ausgewählt. Geh zu <b>Schritt 1 · Vorbereitung</b> oder <b>Schritt 2 · Live</b> – oder wähle unten frei ein Thema.</div>
+
+    <button class="btn ghost" id="freeToggle" style="width:100%; margin-top:16px">➕ Weiteres Thema frei wählen</button>
+    <div id="freeGrid" class="grid" style="display:none; margin-top:12px"></div>
+
+    <div class="bookend" id="bookEndBox" style="margin-top:20px">
+      <div class="eyebrow">Universal-Transfer · Abschluss</div>
+      <p class="uq" id="bookEndText"></p>
+      <div class="bookctl">
+        <button class="btn ghost sm" id="beCycle">↻ andere Frage</button>
+        <button class="btn sm" id="bePick">+ gefragt</button>
+        <span class="uniused" id="beUsed"></span>
+      </div>
+      <div class="uniopt">
+        <label><input type="checkbox" id="endInSum"> Diese Abschlussfrage in die Team-Zusammenfassung aufnehmen</label>
+        <textarea id="endNote" placeholder="optional: was dazu gesagt / mitgenommen wurde" style="display:none"></textarea>
+      </div>
+    </div>
+
+    <button class="btn" id="shareBtn" style="width:100%; margin-top:6px">📋 Zusammenfassung &amp; Teilen</button>
+  </section>
+
+  <!-- REFLECT: single theme bogen -->
+  <section id="bogen" class="screen">
+    <button class="btn sm ghost" data-go="reflect" style="margin-bottom:14px">← zurück zur Agenda</button>
+    <div class="eyebrow" style="color:var(--reflect)">Reflexions-Bogen</div>
+    <h1 id="bogenTitle">Thema</h1>
+    <div id="bogenNote" class="notepin" style="display:none"></div>
+    <div class="stepper" id="stepper"></div>
+    <div id="bogenBody"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn ghost sm" id="prevStep">← vorige Phase</button>
+      <div class="spacer"></div>
+      <button class="btn sm" id="nextStep">nächste Phase →</button>
+    </div>
+  </section>
+
+  <footer>GetCon · Reflexions-Navigator — Prototyp. Inhalt Thema 02 Kommunikation = FINAL, übrige Themen in Produktion. Notizen bleiben lokal.</footer>
+</main>
+
+<!-- SHARE MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="row" style="margin-bottom:10px"><h2 style="margin:0">Zusammenfassung</h2><div class="spacer"></div><button class="linklike" id="closeModal">schließen ✕</button></div>
+    <p class="lead" style="margin-top:0">🔒 Hier stehen nur die Fragen, die du als „gefragt" markiert hast, plus deine Notizen dazu. Deine privaten Live-Beobachtungen bleiben auf dem Gerät und werden <b>nicht</b> geteilt. Du kannst den Text vor dem Teilen anpassen.</p>
+    <textarea id="summaryText"></textarea>
+    <div class="row" style="margin-top:12px">
+      <button class="btn" id="shareNow">Teilen</button>
+      <button class="btn ghost" id="copyNow">In Zwischenablage kopieren</button>
+      <span id="copyMsg" class="badge" style="display:none">kopiert ✓</span>
+    </div>
+    <div class="row" style="margin-top:14px; border-top:1px solid var(--line); padding-top:14px">
+      <button class="btn ghost sm" id="backBtn">← Zurück zur Übersicht</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============ DATEN (Single Source: 01_Grundlagen / 04_Fragen FINAL) ============ */
+const PHASEN = [
+  {key:"oeffnen",   label:"Öffnen",     name:"Öffnen / Wahrnehmen"},
+  {key:"verstehen", label:"Verstehen",  name:"Verstehen / Problem"},
+  {key:"ressourcen",label:"Ressourcen", name:"Ressourcen / Was trug"},
+  {key:"transfer",  label:"Transfer",   name:"Lösung & Transfer"}
+];
+const phaseKey = p => ({"Öffnen":"oeffnen","Verstehen":"verstehen","Ressourcen":"ressourcen","Transfer":"transfer"}[p]);
+
+/* Themen (Achse A, 13). obs = situationsnahes Live-Label (ENTWURF, mit Marco zu schärfen). */
+const THEMEN = [
+  {nr:1, ic:"🤝", name:"Vertrauen & psych. Sicherheit", df:"sich trauen, offen zu sein", obs:"🤐 kaum jemand sagt offen, was Sache ist", fragen:[
+    {id:"01-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Wenn du an die Übung gerade zurückdenkst – wann hast du dich im Team richtig sicher und entspannt gefühlt, und wann vielleicht eher angespannt oder vorsichtig?",fach:"Achtsamkeits-/Wahrnehmungs-Check-in (Facilitation); Gefühlsebene nach Gibbs' Reflexionszyklus (GIBBS-1988)",quelle:"—",hinweis:"Reihum sammeln, nichts kommentieren oder erklären lassen. Es geht nur ums eigene Spüren, noch nicht um Gründe. Niemand muss ins Detail gehen."},
+    {id:"01-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",frage:"Welches eine Wort beschreibt für dich, wie offen oder zurückhaltend du dich in dieser Übung im Team gefühlt hast?",fach:"Facilitation (Ein-Wort-Blitzlicht / Check-in); niedrigschwelliger Stimmungseinstieg ohne Begründungsdruck",quelle:"—",hinweis:"Reihum, nur EIN Wort, keine Begründung. Gerade beim Thema Vertrauen entlastet das – man zeigt etwas, ohne sich erklären zu müssen."},
+    {id:"01-OE-03",phase:"Öffnen",tiefe:"mittel",sf:"Plenum",frage:"Gab es in der Übung gerade einen Moment, in dem sich jemand getraut hat, etwas Offenes oder Unsicheres zu sagen – und wie war das für dich, das mitzubekommen?",fach:"Achtsamkeits-/Wahrnehmungs-Check-in (Facilitation); Erleben sammeln (Kolb, KOLB-1984)",quelle:"—",hinweis:"Nur sammeln, noch nicht bewerten. Wenn nichts kommt, ist das auch eine Antwort und völlig in Ordnung."},
+    {id:"01-VE-01",phase:"Verstehen",tiefe:"mittel",sf:"Plenum",frage:"An welcher Stelle ist es in dieser Übung als Team vielleicht eher schwer gefallen, ganz offen zu sein – und was hat möglicherweise dazu beigetragen, dass man da lieber etwas zurückgehalten hat?",fach:"Systemische Beratung (Entstehung/Bedingungen statt Schuld); NLP-Metamodell (behutsames Nachfragen)",quelle:"—",hinweis:"Stark weichzeichnen – diese Frage ist heikel. Auf das ‚Was hat dazu beigetragen?' lenken, nie auf ‚Wer ist schuld?'. Es geht um Bedingungen, nicht um Personen."},
+    {id:"01-VE-02",phase:"Verstehen",tiefe:"tief",sf:"Plenum",frage:"Stell dir vor, eine fremde Person hätte der Übung gerade stumm zugeschaut – woran hätte sie wohl gemerkt, wie sicher man sich im Team fühlen kann, Fehler oder Unsicherheit zu zeigen?",fach:"Systemische Beratung (Beobachter-/zirkuläre Perspektive – schafft Distanz und Schutz)",quelle:"—",hinweis:"Schafft Abstand – niemand muss von sich selbst sprechen. Bewusst als tiefere Option für offenere Teams. Antworten zulassen, nicht bewerten."},
+    {id:"01-RE-01",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Wann hast du dich in der Übung gerade getraut, etwas zu sagen, von dem du nicht sicher warst, wie es ankommt – und was hat es dir leichter gemacht, es trotzdem auszusprechen?",fach:"Lösungsfokus (SFBT, de Shazer/Insoo Kim Berg, SFBT-DESHAZER) – Ausnahmen-Frage",quelle:"—",hinweis:"Konkret werden lassen: nicht ‚es war okay', sondern was genau geholfen hat (z.B. jemand hat zugehört, niemand hat gelacht)."},
+    {id:"01-RE-02",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Gab es in der Übung gerade einen Moment, in dem ihr euch als Team aufeinander verlassen konntet – woran habt ihr gemerkt, dass das getragen hat?",fach:"Lösungsfokus (SFBT) – Ressourcen-/Bewältigungsfrage; Resilienz (Verlässlichkeit als Stärke)",quelle:"—",hinweis:"Auf das Verlässliche zielen, nicht aufs Fehlende. Konkrete Situation benennen lassen."},
+    {id:"01-RE-03",phase:"Ressourcen",tiefe:"leicht",sf:"Plenum",frage:"Was hat vorhin in der Übung jemand im Team getan, das es anderen leichter gemacht hat, offen zu sein – etwas, das du gern hervorheben würdest?",fach:"Appreciative Inquiry (wertschätzende Ressourcen-Fokussierung, AI-COOPERRIDER); Lösungsfokus",quelle:"—",hinweis:"Verhaltensnah bleiben (‚hat ruhig nachgefragt', ‚hat niemanden bloßgestellt'), kein Lob für ‚Typen'."},
+    {id:"01-TR-01",phase:"Transfer",tiefe:"mittel",sf:"Plenum",frage:"Welche eine Sache nehmt ihr euch vor, damit sich im Team alle noch ein bisschen mehr trauen, offen zu sein – und woran würdet ihr nächste Woche merken, dass sie wirkt?",fach:"Erlebnispäd. Debriefing (Kolb: Anwenden, KOLB-1984); Lösungsfokus (kleinster Schritt)",quelle:"—",hinweis:"Auf EINE konkrete Sache eingrenzen. Das ‚woran merkt ihr es' macht den Vorsatz überprüfbar. Auf Klima zielen, nicht einzelne verpflichten."},
+    {id:"01-TR-02",phase:"Transfer",tiefe:"tief",sf:"allein / Paar",frage:"Was möchtest du selbst beim nächsten Mal tun, damit es jemandem im Team leichter fällt, sich zu öffnen oder einen Fehler zuzugeben?",fach:"Lösungsfokus (SFBT) – wohlgeformte Zielfrage; Selbstverantwortungs-Fokus",quelle:"—",hinweis:"Bewusst aufs eigene Verhalten gerichtet, nicht auf die anderen. Kurz allein denken, dann optional teilen. Nichts erzwingen."}
+  ]},
+  {nr:2, ic:"🗣️", name:"Kommunikation", df:"zuhören, abstimmen, Missverständnisse", obs:"🗣️ aneinander vorbeigeredet", fragen:[
+    {id:"02-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",
+      frage:"Wenn du an die Übung gerade denkst – wann hattest du das Gefühl, wirklich gehört zu werden, und wann vielleicht eher nicht?",
+      fach:"Achtsamkeits-/Wahrnehmungs-Check-in (Facilitation); Einstieg über die eigene Erfahrung",quelle:"—",
+      hinweis:"Reihum sammeln, nichts kommentieren. Es geht nur ums Wahrnehmen, noch nicht ums Erklären."},
+    {id:"02-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",
+      frage:"Welches eine Wort beschreibt für dich, wie sich das Miteinander beim Reden und Zuhören in dieser Übung angefühlt hat?",
+      fach:"Facilitation (Ein-Wort-Blitzlicht); Gefühlsebene nach Gibbs' Reflexionszyklus (GIBBS-1988)",quelle:"—",
+      hinweis:"Reihum, nur EIN Wort, kein Kommentar. Schafft schnell ein Stimmungsbild, ohne dass jemand viel sagen muss."},
+    {id:"02-OE-03",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",
+      frage:"Was ist dir in der Übung gerade beim Miteinander aufgefallen – ein Moment, der dir im Kopf geblieben ist?",
+      fach:"Achtsamkeits-/Wahrnehmungs-Check-in (Facilitation); Erleben sammeln (Kolb, KOLB-1984)",quelle:"—",
+      hinweis:"Nur sammeln, noch nicht erklären oder bewerten. Schöne wie schwierige Momente sind beide willkommen."},
+    {id:"02-VE-01",phase:"Verstehen",tiefe:"mittel",sf:"Plenum",
+      frage:"An welcher Stelle habt ihr als Team in dieser Übung vielleicht aneinander vorbeigeredet – und was hat dazu geführt, dass die Botschaft nicht so ankam, wie sie gemeint war?",
+      fach:"NLP-Metamodell (präzises Nachfragen); Systemische Beratung (Entstehung statt Schuld)",quelle:"—",
+      hinweis:"Auf das ‚Wie ist es entstanden?' lenken, nicht auf ‚Wer war schuld?'."},
+    {id:"02-VE-02",phase:"Verstehen",tiefe:"tief",sf:"Plenum",
+      frage:"Stell dir vor, eine Person aus dem Team hätte der Übung gerade stumm zugeschaut – was hätte sie über euer Miteinander beim Reden und Zuhören bemerkt?",
+      fach:"Systemische Beratung (zirkuläre / Beobachter-Perspektive)",quelle:"—",
+      hinweis:"Schafft Abstand – das Team blickt von außen auf sich selbst. Bei angespannten Teams bewusst als tiefere Option."},
+    {id:"02-RE-01",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",
+      frage:"Wann lief die Verständigung in der Übung gerade richtig gut – was habt ihr in dem Moment gemacht, das geholfen hat?",
+      fach:"Lösungsfokus (SFBT, de Shazer/Insoo Kim Berg, SFBT-DESHAZER) – Ausnahmen-Frage",quelle:"—",
+      hinweis:"Konkret werden lassen: nicht ‚wir waren nett', sondern ‚was genau hat geholfen'."},
+    {id:"02-RE-02",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",
+      frage:"Gab es in der Übung gerade einen Moment, in dem ein Missverständnis schnell wieder eingefangen wurde – wie habt ihr das als Team hinbekommen?",
+      fach:"Lösungsfokus (SFBT) – Bewältigungs-/Coping-Frage; Resilienz (Selbstwirksamkeit)",quelle:"—",
+      hinweis:"Zielt auf die Reparatur, nicht auf den Fehler: Was genau habt ihr getan, damit es wieder rund lief?"},
+    {id:"02-RE-03",phase:"Ressourcen",tiefe:"leicht",sf:"Plenum",
+      frage:"Was hat vorhin in der Übung jemand anderes im Team beim Zuhören gut gemacht, das du gern hervorheben würdest?",
+      fach:"Appreciative Inquiry (wertschätzende Ressourcen-Fokussierung, AI-COOPERRIDER); Lösungsfokus",quelle:"—",
+      hinweis:"Verhaltensnah bleiben (‚hat nachgefragt', ‚hat ausreden lassen'), kein Lob für ‚Typen'."},
+    {id:"02-TR-01",phase:"Transfer",tiefe:"mittel",sf:"Plenum",
+      frage:"Welche eine Sache nehmt ihr euch fürs Reden und Zuhören im Alltag konkret vor – und woran würdet ihr nächste Woche merken, dass sie wirkt?",
+      fach:"Erlebnispäd. Debriefing (Kolb: Anwenden, KOLB-1984); Lösungsfokus (kleinster Schritt)",quelle:"—",
+      hinweis:"Auf EINE konkrete Sache eingrenzen. Das ‚woran merkt ihr es' macht den Vorsatz überprüfbar."},
+    {id:"02-TR-02",phase:"Transfer",tiefe:"tief",sf:"allein / Paar",
+      frage:"Was wünschst du dir von dir selbst beim nächsten Mal, wenn ein Gespräch im Team zu kippen droht?",
+      fach:"Lösungsfokus (SFBT) – wohlgeformte Zielfrage; Selbstverantwortungs-Fokus",quelle:"—",
+      hinweis:"Bewusst auf das eigene Verhalten gerichtet, nicht auf die anderen. Kurz allein denken, dann optional teilen."}
+  ]},
+  {nr:3, ic:"🧩", name:"Zusammenhalt / Wir-Gefühl", df:"Zugehörigkeit, ein Team sein", obs:"🧩 jede:r für sich statt als Team", fragen:[
+    {id:"03-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Wenn du an die Übung gerade denkst – wann hast du dich dem Team wirklich nah gefühlt, und wann vielleicht eher für dich allein?",fach:"Achtsamkeits-/Wahrnehmungs-Check-in (Facilitation); Gefühlsebene nach Gibbs' Reflexionszyklus (GIBBS-1988)",quelle:"—",hinweis:"Reihum sammeln, nichts kommentieren. Beide Seiten sind ok – Nähe wie Distanz."},
+    {id:"03-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",frage:"Welches eine Wort beschreibt für dich, wie ‚Team' sich in dieser Übung angefühlt hat?",fach:"Facilitation (Ein-Wort-Blitzlicht); Gefühlsebene nach Gibbs' Reflexionszyklus (GIBBS-1988)",quelle:"—",hinweis:"Reihum, nur EIN Wort, kein Kommentar. Schafft schnell ein Stimmungsbild."},
+    {id:"03-OE-03",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Gab es in der Übung gerade einen kleinen Moment, in dem ihr euch als ein Team angefühlt habt – einer, der dir im Kopf geblieben ist?",fach:"Achtsamkeits-/Wahrnehmungs-Check-in (Facilitation); Erleben sammeln (Kolb, KOLB-1984)",quelle:"—",hinweis:"Nur sammeln, noch nicht erklären. Auch ganz kleine Momente zählen (ein Lachen, ein kurzes Einspringen)."},
+    {id:"03-VE-01",phase:"Verstehen",tiefe:"mittel",sf:"Plenum",frage:"An welcher Stelle ist als Team in dieser Übung vielleicht etwas Verbindendes verloren gegangen – und was hat dazu geführt, dass der Zusammenhalt da ein Stück gefehlt hat?",fach:"Systemische Beratung (Entstehung statt Schuld); NLP-Milton-Modell (weichzeichnende Sprachebene)",quelle:"—",hinweis:"Heikle Phase. Auf ‚Wie ist es entstanden?' lenken, nicht auf ‚Wer steht außen vor?'. Niemanden als Außenseiter benennen – im ‚Wir' bleiben."},
+    {id:"03-VE-02",phase:"Verstehen",tiefe:"tief",sf:"Plenum",frage:"Stell dir vor, jemand von außen hätte euch in der Übung gerade eine Weile zugeschaut – woran hätte die Person gemerkt, dass ihr ein Team seid, und an welcher Stelle vielleicht eher nicht?",fach:"Systemische Beratung (zirkuläre / Beobachter-Perspektive); NLP-Milton-Modell (entlastende Distanz)",quelle:"—",hinweis:"Schafft Abstand – das entlastet. Antworten zulassen, nicht bewerten. Bei angespannten Teams als tiefere Option."},
+    {id:"03-RE-01",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Wann hat sich der Zusammenhalt in der Übung gerade richtig getragen angefühlt – was habt ihr in dem Moment gemacht, das euch zusammengebracht hat?",fach:"Lösungsfokus (SFBT, de Shazer/Insoo Kim Berg, SFBT-DESHAZER) – Ausnahmen-Frage",quelle:"—",hinweis:"Konkret werden lassen: nicht ‚wir waren ein gutes Team', sondern was genau verbunden hat (zusammen gelacht, füreinander eingesprungen)."},
+    {id:"03-RE-02",phase:"Ressourcen",tiefe:"tief",sf:"Plenum",frage:"Was hält euch als Team eigentlich zusammen, auch an Tagen, an denen es mal nicht rund läuft?",fach:"Resilienz-Coaching (tragende Ressourcen sichtbar machen); Appreciative Inquiry (AI-COOPERRIDER)",quelle:"—",hinweis:"Zielt auf das stabile Fundament, nicht auf den guten Tag. Antworten stehen lassen – sie sind der gemeinsame Anker."},
+    {id:"03-RE-03",phase:"Ressourcen",tiefe:"leicht",sf:"Plenum",frage:"Was hat vorhin in der Übung jemand im Team getan, das anderen das Gefühl gegeben hat, dazuzugehören – etwas, das du gern hervorheben würdest?",fach:"Appreciative Inquiry (wertschätzende Ressourcen-Fokussierung, AI-COOPERRIDER); Lösungsfokus",quelle:"—",hinweis:"Verhaltensnah bleiben (‚hat begrüßt', ‚hat eingebunden'), kein Lob für ‚Typen'."},
+    {id:"03-TR-01",phase:"Transfer",tiefe:"mittel",sf:"Plenum",frage:"Welche eine kleine Sache nehmt ihr euch vor, damit sich im Alltag noch mehr Leute dazugehörig fühlen – und woran würdet ihr nächste Woche merken, dass sie wirkt?",fach:"Erlebnispäd. Debriefing (Kolb: Anwenden, KOLB-1984); Lösungsfokus (kleinster Schritt)",quelle:"—",hinweis:"Auf EINE konkrete Sache eingrenzen. Das ‚woran merkt ihr es' macht den Vorsatz überprüfbar."},
+    {id:"03-TR-02",phase:"Transfer",tiefe:"tief",sf:"allein / Paar",frage:"Was kannst du selbst beim nächsten Mal tun, damit sich jemand im Team ein Stück mehr dazugehörig fühlt?",fach:"Lösungsfokus (SFBT) – wohlgeformte Zielfrage; Selbstverantwortungs-Fokus (Brücke zu Thema 13)",quelle:"—",hinweis:"Bewusst aufs eigene Verhalten gerichtet. Kurz allein denken, dann optional zu zweit teilen."}
+  ]},
+  {nr:4, ic:"👋", name:"Kennenlernen", df:"einander neu entdecken", obs:"👋 man kennt sich kaum / Neues entdeckt", fragen:[
+    {id:"04-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Was an einer Person hier im Team hat dich in der Übung gerade überrascht – etwas, das du so nicht erwartet hättest?",fach:"Facilitation (neugier-orientierter Check-in); Einstieg über konkrete eigene Wahrnehmung (Kolb)",quelle:"—",hinweis:"Reihum sammeln, nur Positives. Nichts kommentieren, kein Nachhaken. Wer nichts hat, darf passen."},
+    {id:"04-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"allein / Plenum",frage:"Wenn du an die anderen hier denkst – über wen weißt du eigentlich erstaunlich wenig, obwohl ihr schon länger zusammenarbeitet?",fach:"Facilitation (Wahrnehmungs-Check-in); Systemische Beratung (Blick aufs Beziehungsnetz)",quelle:"—",hinweis:"Erst kurz für sich denken. Wer mag, teilt es – niemand muss. Keine Namen an den Pranger; leicht halten."},
+    {id:"04-OE-03",phase:"Öffnen",tiefe:"mittel",sf:"Plenum",frage:"Was würdest du dir wünschen, dass die anderen im Team über dich wissen – etwas, das im Alltag selten zur Sprache kommt?",fach:"Facilitation (Selbst-Öffnung im sicheren Rahmen); Systemische Beratung (Selbstkundgabe)",quelle:"—",hinweis:"Freiwillig. Jede:r entscheidet selbst, wie viel sie/er teilt – auch eine Kleinigkeit zählt."},
+    {id:"04-VE-01",phase:"Verstehen",tiefe:"mittel",sf:"Plenum",frage:"Was hält uns im Alltag eigentlich davon ab, mehr voneinander mitzubekommen – woran liegt es, dass man sich oft nur von der Arbeitsseite kennt?",fach:"Systemische Beratung (nach Mustern und Bedingungen fragen, nicht nach Schuld)",quelle:"—",hinweis:"Auf die Umstände lenken (Zeit, Tagesablauf, Gelegenheiten), nicht auf Personen. Verstehen, nicht bemängeln."},
+    {id:"04-VE-02",phase:"Verstehen",tiefe:"tief",sf:"Plenum",frage:"Stell dir vor, jemand wäre für die Übung gerade neu zu euch gestoßen – was würde diese Person nach kurzer Zeit über euch herausfinden, und was vielleicht erst nach Monaten?",fach:"Systemische Beratung (zirkuläre / Beobachter-Perspektive); Facilitation",quelle:"—",hinweis:"Schafft Abstand – neugierig und spielerisch lassen, Antworten nicht bewerten."},
+    {id:"04-RE-01",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Wann hast du in der Übung gerade jemanden im Team ein Stück besser kennengelernt – wie kam dieser Moment zustande?",fach:"Lösungsfokus (SFBT, de Shazer/Insoo Kim Berg, SFBT-DESHAZER) – Ausnahmen-Frage",quelle:"—",hinweis:"Konkret werden lassen: Was hat den Moment möglich gemacht (eine Pause, ein gemeinsames Projekt)?"},
+    {id:"04-RE-02",phase:"Ressourcen",tiefe:"leicht",sf:"Plenum",frage:"Welche Stärke oder schöne Eigenschaft an jemandem im Team würdest du gern mal laut aussprechen – etwas, das du an der Person schätzt?",fach:"Appreciative Inquiry (wertschätzende Ressourcen-Fokussierung, AI-COOPERRIDER)",quelle:"—",hinweis:"An konkretem Tun/Erleben festmachen (‚hat mir letztens geholfen, als …'), kein Lob für ‚Typen'. Freiwillig."},
+    {id:"04-RE-03",phase:"Ressourcen",tiefe:"mittel",sf:"Kleingruppe / Plenum",frage:"Was bringt jede:r von euch an Erfahrungen, Interessen oder Talenten mit, das im Team noch viel zu selten genutzt wird?",fach:"Appreciative Inquiry (verborgene Ressourcen heben, AI-COOPERRIDER); Lösungsfokus",quelle:"—",hinweis:"Auch Dinge außerhalb der Arbeit zählen (Hobbys, frühere Berufe, Sprachen). Sammeln, ohne Druck."},
+    {id:"04-TR-01",phase:"Transfer",tiefe:"mittel",sf:"Plenum",frage:"Welche eine Sache nehmt ihr euch konkret vor, um im Alltag mehr voneinander mitzubekommen – und woran würdet ihr in ein paar Wochen merken, dass es sich verändert hat?",fach:"Erlebnispäd. Debriefing (Kolb: Anwenden, KOLB-1984); Lösungsfokus (kleinster Schritt)",quelle:"—",hinweis:"Auf EINE machbare Sache eingrenzen (z.B. Pause gemeinsam, kurze Vorstellrunde)."},
+    {id:"04-TR-02",phase:"Transfer",tiefe:"tief",sf:"allein / Paar",frage:"Auf wen im Team möchtest du in nächster Zeit ein bisschen mehr zugehen – und was wäre dein erster kleiner Schritt?",fach:"Lösungsfokus (SFBT) – wohlgeformte Zielfrage / kleinster nächster Schritt; Selbstverantwortungs-Fokus",quelle:"—",hinweis:"Bewusst aufs eigene Tun gerichtet und klein halten. Kurz allein denken, dann optional teilen."}
+  ]},
+  {nr:5, ic:"🎭", name:"Rollenklarheit & Verantwortung", df:"wer übernimmt was", obs:"👤 einer dominierte / Rollen unklar", fragen:[
+    {id:"05-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Welche Rolle hast du in der Übung gerade für dich übernommen – eher angeführt, mitgemacht, beobachtet oder auf die Zeit geschaut?",fach:"Facilitation (Wahrnehmungs-Check-in); funktionale Teamrollen als Hintergrund-Linse (Belbin, BELBIN-TEAMROLLEN)",quelle:"—",hinweis:"Reihum sammeln, nichts bewerten. Es geht nur darum, was jede:r bei sich selbst wahrgenommen hat – jede Rolle ist gleich viel wert."},
+    {id:"05-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",frage:"Welches eine Wort beschreibt, wie klar oder unklar für dich war, wer in der Übung gerade wofür zuständig ist?",fach:"Facilitation (Ein-Wort-Blitzlicht / Check-in)",quelle:"—",hinweis:"Reihum, nur EIN Wort, keine Begründung. Ergibt schnell ein Stimmungsbild zur Rollenklarheit."},
+    {id:"05-OE-03",phase:"Öffnen",tiefe:"mittel",sf:"Plenum",frage:"Ist dir in der Übung gerade aufgefallen, wer eher auf die Aufgabe geschaut hat und wer eher auf die Stimmung im Team – und wie hat sich das ergänzt?",fach:"Beobachtungs-Linse Menschen-↔Aufgaben-Orientierung (verhaltensnah, DISG-ACHSEN als Hintergrund, kein Etikett); Facilitation",quelle:"—",hinweis:"Streng verhaltensnah bleiben (‚hat den Plan im Blick gehabt', ‚hat nachgefragt, wie es allen geht') – niemanden als ‚Typ' einsortieren. Auf das Ergänzen zielen, nicht auf besser/schlechter."},
+    {id:"05-VE-01",phase:"Verstehen",tiefe:"mittel",sf:"Plenum",frage:"An welcher Stelle war als Team vielleicht nicht ganz klar, wer was übernimmt – und was hat möglicherweise dazu geführt, dass da etwas offen blieb oder sich überschnitten hat?",fach:"Systemische Beratung (Entstehung/Bedingungen statt Schuld); NLP-Milton-Modell (weichzeichnende Sprachebene)",quelle:"—",hinweis:"Weichzeichnen – auf ‚Wie ist es entstanden?' lenken, nicht auf ‚Wer hat versagt?'. Es geht um Bedingungen, nicht um Personen."},
+    {id:"05-VE-02",phase:"Verstehen",tiefe:"tief",sf:"Plenum",frage:"Wo hat sich vielleicht gerieben, dass einige eher treibend vorangehen und andere eher bedacht abwarten – und wie seid ihr als Team damit umgegangen?",fach:"Beobachtungs-Linse zurückhaltend↔treibend (verhaltensnah, DISG-ACHSEN als Hintergrund, kein Etikett); Systemische Beratung",quelle:"—",hinweis:"Heikel – nie als ‚die Lauten gegen die Leisen' framen, nie Typen vergeben. Beides als gleichwertige Beiträge behandeln. Als tiefere Option für offenere Teams."},
+    {id:"05-RE-01",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Wann hat sich die Verteilung der Aufgaben in der Übung gerade richtig stimmig angefühlt – was habt ihr da gemacht, dass jede:r wusste, was zu tun ist?",fach:"Lösungsfokus (SFBT, de Shazer/Insoo Kim Berg, SFBT-DESHAZER) – Ausnahmen-Frage",quelle:"—",hinweis:"Konkret werden lassen: nicht ‚lief gut', sondern was genau Klarheit geschaffen hat (jemand hat verteilt, ihr habt kurz abgestimmt)."},
+    {id:"05-RE-02",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Welche unterschiedlichen Stärken haben in der Übung gerade ineinandergegriffen – wer hat was beigetragen, das die anderen gut ergänzt hat?",fach:"Appreciative Inquiry (Ergänzung als Ressource sichtbar machen, AI-COOPERRIDER); Belbin-Hintergrund (komplementäre Rollen)",quelle:"—",hinweis:"Auf das Zusammenspiel zielen, nicht auf einzelne ‚Beste'. Verhaltensnah benennen (‚hat strukturiert', ‚hat zwischen allen vermittelt')."},
+    {id:"05-RE-03",phase:"Ressourcen",tiefe:"leicht",sf:"Plenum",frage:"Wo hat jemand in der Übung gerade von sich aus Verantwortung übernommen, ohne dass es jemand verlangt hat – etwas, das du gern hervorheben würdest?",fach:"Appreciative Inquiry (wertschätzende Ressourcen-Fokussierung, AI-COOPERRIDER); Lösungsfokus",quelle:"—",hinweis:"Wertschätzung an konkretem Tun festmachen, kein Lob für ‚Typen'. Auch kleine Dinge zählen."},
+    {id:"05-TR-01",phase:"Transfer",tiefe:"mittel",sf:"Plenum",frage:"Welche eine Sache nehmt ihr euch vor, damit im Alltag klarer ist, wer wofür Verantwortung trägt – und woran würdet ihr nächste Woche merken, dass sie hilft?",fach:"Erlebnispäd. Debriefing (Kolb: Anwenden, KOLB-1984); Lösungsfokus (kleinster Schritt)",quelle:"—",hinweis:"Auf EINE konkrete Sache eingrenzen. Das ‚woran merkt ihr es' macht den Vorsatz überprüfbar."},
+    {id:"05-TR-02",phase:"Transfer",tiefe:"tief",sf:"allein / Paar",frage:"Welche Verantwortung möchtest du selbst im Team beim nächsten Mal bewusster übernehmen – oder bewusster abgeben?",fach:"Lösungsfokus (SFBT) – wohlgeformte Zielfrage; Selbstverantwortungs-Fokus",quelle:"—",hinweis:"Das ‚abgeben' ist bewusst dabei – auch Loslassen kann der richtige Schritt sein. Aufs eigene Verhalten gerichtet. Kurz allein denken, dann optional teilen."}
+  ]},
+  {nr:6, ic:"⚡", name:"Konflikt & Toleranz", df:"Spannungen, Unterschiede aushalten", obs:"⚡ es gab Reibung / Spannung", fragen:[
+    {id:"06-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Wenn du an die Übung gerade denkst – wann lief es reibungslos, und wann war vielleicht etwas Spannung oder Reibung spürbar?",fach:"Facilitation (Wahrnehmungs-Check-in); Gefühlsebene nach Gibbs' Reflexionszyklus (GIBBS-1988)",quelle:"—",hinweis:"Reihum sammeln, nichts kommentieren. Beide Seiten zulassen – auch ‚alles reibungslos' ist eine gültige Antwort."},
+    {id:"06-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",frage:"Welches eine Wort beschreibt, wie sich die Stimmung für dich angefühlt hat, als es in der Übung gerade mal nicht ganz rund lief?",fach:"Facilitation (Ein-Wort-Blitzlicht); Gefühlsebene nach Gibbs (GIBBS-1988)",quelle:"—",hinweis:"Reihum, nur EIN Wort, keine Begründung. Entlastet – man zeigt etwas, ohne sich erklären zu müssen."},
+    {id:"06-OE-03",phase:"Öffnen",tiefe:"mittel",sf:"Plenum",frage:"Woran hast du bei dir selbst gemerkt, dass da gerade Spannung war – am Ton, im Bauch, im eigenen Verhalten?",fach:"Achtsamkeits-Check-in (Selbstwahrnehmung); GFK (Beobachtung eigener Gefühle, ROSENBERG-GFK)",quelle:"—",hinweis:"Bewusst bei sich selbst bleiben (‚ich' statt ‚die anderen'). Das ist sicherer und macht keinen angreifbar. Freiwillig."},
+    {id:"06-VE-01",phase:"Verstehen",tiefe:"mittel",sf:"Plenum",frage:"An welcher Stelle sind in der Übung gerade vielleicht unterschiedliche Sichtweisen aufeinandergetroffen – und was genau war es, das sich da gerieben hat?",fach:"GFK (Beobachtung statt Bewertung, ROSENBERG-GFK); Systemische Beratung; NLP-Milton-Modell (weichzeichnen)",quelle:"—",hinweis:"Sehr behutsam. Auf die Sache lenken (‚was war es genau'), nie auf ‚wer hat angefangen'. Beobachtung von Vorwurf trennen – nicht nach Schuldigen suchen."},
+    {id:"06-VE-02",phase:"Verstehen",tiefe:"tief",sf:"Plenum",frage:"Was war jemandem, der die Sache anders gesehen hat als du, in dem Moment vielleicht wichtig – was könnte dahinter gestanden haben?",fach:"GFK (Bedürfnis hinter der Position, ROSENBERG-GFK); NLP-Reframing (Perspektivwechsel)",quelle:"—",hinweis:"Perspektivwechsel, kein Rechtfertigen. Es geht ums Verstehen des Anliegens dahinter, nicht ums Rechthaben. Als tiefere Option für offenere Teams."},
+    {id:"06-RE-01",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Gab es in der Übung gerade einen Moment, in dem sich eine Spannung wieder gelöst hat – was hat dazu beigetragen, dass es danach wieder ging?",fach:"Lösungsfokus (SFBT, de Shazer/Insoo Kim Berg, SFBT-DESHAZER) – Ausnahmen-Frage",quelle:"—",hinweis:"Auf das Lösende zielen, nicht auf den Streit. Konkret werden lassen: Was hat geholfen (jemand hat eingelenkt, ihr habt kurz durchgeatmet)?"},
+    {id:"06-RE-02",phase:"Ressourcen",tiefe:"tief",sf:"Plenum",frage:"Was hilft euch als Team, unterschiedliche Meinungen auszuhalten, ohne dass gleich ein Streit daraus wird?",fach:"Resilienz-Coaching (Toleranz als tragende Ressource); Lösungsfokus",quelle:"—",hinweis:"Zielt auf das stabile Fundament, nicht auf den einen Konflikt. Antworten stehen lassen – sie zeigen, was das Team schon kann."},
+    {id:"06-RE-03",phase:"Ressourcen",tiefe:"leicht",sf:"Plenum",frage:"Was hat in der Übung gerade jemand getan, das eine angespannte Situation entschärft hat – etwas, das du gern hervorheben würdest?",fach:"Appreciative Inquiry (wertschätzende Ressourcen-Fokussierung, AI-COOPERRIDER); GFK",quelle:"—",hinweis:"Verhaltensnah bleiben (‚hat ruhig nachgefragt', ‚hat vermittelt'), kein Lob für ‚Typen'."},
+    {id:"06-TR-01",phase:"Transfer",tiefe:"mittel",sf:"Plenum",frage:"Welche eine Sache nehmt ihr euch vor, wie ihr im Alltag mit Spannungen umgehen wollt, wenn sie das nächste Mal auftauchen – und woran würdet ihr merken, dass es hilft?",fach:"Erlebnispäd. Debriefing (Kolb: Anwenden, KOLB-1984); Lösungsfokus (kleinster Schritt)",quelle:"—",hinweis:"Auf EINE konkrete Sache eingrenzen (z.B. ‚erst ausreden lassen'). Das ‚woran merkt ihr es' macht den Vorsatz überprüfbar."},
+    {id:"06-TR-02",phase:"Transfer",tiefe:"tief",sf:"allein / Paar",frage:"Was möchtest du selbst beim nächsten Reibungspunkt anders machen, damit ein Gespräch eher möglich bleibt?",fach:"Lösungsfokus (SFBT) – wohlgeformte Zielfrage; GFK (Selbstverantwortung im Konflikt)",quelle:"—",hinweis:"Bewusst aufs eigene Verhalten gerichtet, nicht auf die anderen. Kurz allein denken, dann optional zu zweit teilen. Nichts erzwingen."}
+  ]},
+  {nr:7, ic:"🧗", name:"Kooperation & Problemlösen", df:"zusammen ein Ziel erreichen", obs:"🧗 Abstimmung beim Lösen hakte", fragen:[
+    {id:"07-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Wenn du an die Übung gerade denkst – wann habt ihr richtig gut zusammengearbeitet, und wann hat das Zusammenspiel vielleicht eher gehakt?",fach:"Facilitation (Wahrnehmungs-Check-in); Gefühlsebene nach Gibbs' Reflexionszyklus (GIBBS-1988)",quelle:"—",hinweis:"Reihum sammeln, nichts bewerten. Beide Seiten zulassen – das gibt schnell ein gemeinsames Bild."},
+    {id:"07-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",frage:"Welches eine Wort beschreibt für dich, wie ihr in der Übung gerade als Team zusammengearbeitet habt?",fach:"Facilitation (Ein-Wort-Blitzlicht / Check-in)",quelle:"—",hinweis:"Reihum, nur EIN Wort, keine Begründung. Ergibt schnell ein Stimmungsbild zur Zusammenarbeit."},
+    {id:"07-OE-03",phase:"Öffnen",tiefe:"mittel",sf:"Plenum",frage:"Gab es in der Übung gerade einen Moment, in dem plötzlich alles ineinandergegriffen hat – einer, der dir im Kopf geblieben ist?",fach:"Achtsamkeits-/Wahrnehmungs-Check-in (Facilitation); Erleben sammeln (Kolb: konkrete Erfahrung, KOLB-1984)",quelle:"—",hinweis:"Nur sammeln, noch nicht erklären. Auch kleine Momente zählen (ein gutes Zuspiel, ein kurzer Blick, der gereicht hat)."},
+    {id:"07-VE-01",phase:"Verstehen",tiefe:"mittel",sf:"Plenum",frage:"An welcher Stelle ist die Abstimmung als Team vielleicht ins Stocken geraten – und was hat möglicherweise dazu geführt, dass ihr da kurz nicht zusammengefunden habt?",fach:"Systemische Beratung (Entstehung/Bedingungen statt Schuld); NLP-Milton-Modell (weichzeichnen)",quelle:"—",hinweis:"Weichzeichnen – auf ‚Wie kam das?' lenken, nicht auf ‚Wer hat gebremst?'. Es geht um den Ablauf, nicht um Personen."},
+    {id:"07-VE-02",phase:"Verstehen",tiefe:"tief",sf:"Plenum",frage:"Wie seid ihr in der Übung gerade vom ‚einfach Loslegen' zu einem gemeinsamen Plan gekommen – oder ist der Plan vielleicht erst unterwegs entstanden?",fach:"Systemische Beratung (Muster der Abstimmung sichtbar machen); Erlebnispäd. Debriefing (Handlungs-Reflexion, KOLB-1984)",quelle:"—",hinweis:"Auf den Prozess schauen, ohne zu werten – beides (planen vorab / unterwegs justieren) kann passen. Hilft dem Team, sein eigenes Vorgehen zu erkennen."},
+    {id:"07-RE-01",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Wann lief das Zusammenspiel in der Übung gerade fast wie von selbst – was habt ihr da gemacht, das es so leicht gemacht hat?",fach:"Lösungsfokus (SFBT, de Shazer/Insoo Kim Berg, SFBT-DESHAZER) – Ausnahmen-Frage",quelle:"—",hinweis:"Konkret werden lassen: nicht ‚lief gut', sondern was genau (kurze Absprachen, jede:r wusste die eigene Aufgabe)."},
+    {id:"07-RE-02",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Welche Idee oder Herangehensweise von jemandem hat euch in der Übung gerade weitergebracht – und wodurch genau?",fach:"Appreciative Inquiry (Beiträge wertschätzen, AI-COOPERRIDER); Lösungsfokus",quelle:"—",hinweis:"Verhaltensnah benennen (‚hat vorgeschlagen, erst zu sortieren'), kein Lob für ‚Typen'. Auf die Wirkung der Idee zielen."},
+    {id:"07-RE-03",phase:"Ressourcen",tiefe:"leicht",sf:"Plenum",frage:"Wie habt ihr es geschafft, dass unterschiedliche Fähigkeiten im Team zum Einsatz kamen – wer hat was eingebracht?",fach:"Appreciative Inquiry (verborgene Ressourcen heben, AI-COOPERRIDER); Systemische Beratung",quelle:"—",hinweis:"Auf das Zusammenwirken zielen, nicht auf einzelne ‚Beste'. Auch leise Beiträge sichtbar machen."},
+    {id:"07-TR-01",phase:"Transfer",tiefe:"mittel",sf:"Plenum",frage:"Welche eine Sache nehmt ihr euch vor, damit ihr im Alltag bei einer gemeinsamen Aufgabe noch besser zusammenfindet – und woran würdet ihr merken, dass es wirkt?",fach:"Erlebnispäd. Debriefing (Kolb: Anwenden, KOLB-1984); Lösungsfokus (kleinster Schritt)",quelle:"—",hinweis:"Auf EINE konkrete Sache eingrenzen (z.B. ‚kurz abstimmen, bevor wir loslegen'). Das ‚woran merkt ihr es' macht den Vorsatz überprüfbar."},
+    {id:"07-TR-02",phase:"Transfer",tiefe:"tief",sf:"allein / Paar",frage:"Was kannst du selbst beim nächsten gemeinsamen Vorhaben tun, damit die Abstimmung im Team leichter gelingt?",fach:"Lösungsfokus (SFBT) – wohlgeformte Zielfrage; Selbstverantwortungs-Fokus (eigener Beitrag zur Abstimmung)",quelle:"—",hinweis:"Bewusst aufs eigene Tun gerichtet und klein halten. Kurz allein denken, dann optional zu zweit teilen."}
+  ]},
+  {nr:8, ic:"🌱", name:"Resilienz / Entlastung", df:"was trägt unter Druck", obs:"🌱 Druck / Stress war spürbar", fragen:[
+    {id:"08-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Wenn du an die Übung gerade denkst – wann hast du Druck oder Anspannung gespürt, und wann eher Leichtigkeit?",fach:"Facilitation (Wahrnehmungs-Check-in); Gefühlsebene nach Gibbs' Reflexionszyklus (GIBBS-1988)",quelle:"—",hinweis:"Reihum sammeln, nichts kommentieren. Beide Seiten zulassen – Druck wie Leichtigkeit sind okay."},
+    {id:"08-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",frage:"Welches eine Wort beschreibt, wie viel Druck oder Ruhe du in der Übung gerade gespürt hast?",fach:"Facilitation (Ein-Wort-Blitzlicht / Check-in)",quelle:"—",hinweis:"Reihum, nur EIN Wort, keine Begründung. Niedrigschwellig – niemand muss erklären, warum."},
+    {id:"08-OE-03",phase:"Öffnen",tiefe:"mittel",sf:"Plenum",frage:"Woran hast du bei dir gemerkt, dass es gerade fordernd wurde – und was hat dir geholfen, trotzdem dranzubleiben?",fach:"Achtsamkeit (Körper-/Selbstwahrnehmung); Resilienz-Coaching (erster Blick auf Bewältigung)",quelle:"—",hinweis:"Bei sich selbst bleiben (‚ich'). Das ‚was hat geholfen' lenkt früh auf Ressourcen, nicht auf das Problem. Freiwillig."},
+    {id:"08-VE-01",phase:"Verstehen",tiefe:"mittel",sf:"Plenum",frage:"An welcher Stelle ist der Druck als Team vielleicht größer geworden – und was hat möglicherweise dazu beigetragen, dass es anstrengender wurde?",fach:"Systemische Beratung (Bedingungen statt Schuld); NLP-Milton-Modell (weichzeichnen)",quelle:"—",hinweis:"Weichzeichnen – auf ‚Was hat dazu beigetragen?' lenken, nicht auf ‚Wer hat versagt?'. Es geht um Umstände, nicht um Personen."},
+    {id:"08-VE-02",phase:"Verstehen",tiefe:"tief",sf:"Plenum",frage:"Was an dieser Übung habt ihr vielleicht aus dem Alltag wiedererkannt – etwas, das auch dort manchmal Kraft kostet?",fach:"Supervision (Belastungsmuster erkennen); Systemische Beratung",quelle:"—",hinweis:"Behutsam und freiwillig – nicht ins Private drängen. Wenn das Team beim Übungsbezug bleiben mag, ist das völlig in Ordnung. Als tiefere Option."},
+    {id:"08-RE-01",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Wann hat euch unter Druck in der Übung gerade etwas getragen – was genau hat geholfen, dass ihr drangeblieben seid?",fach:"Lösungsfokus (SFBT, de Shazer/Insoo Kim Berg, SFBT-DESHAZER) – Bewältigungs-/Ausnahmen-Frage",quelle:"—",hinweis:"Konkret werden lassen: nicht ‚wir haben durchgehalten', sondern was getragen hat (eine Pause, ein aufmunterndes Wort, ein Plan)."},
+    {id:"08-RE-02",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Wann hat es euch entlastet, dass ihr nicht allein wart – woran habt ihr gemerkt, dass das Team euch trägt?",fach:"Resilienz-Coaching (soziale Unterstützung als tragende Ressource); Appreciative Inquiry (AI-COOPERRIDER)",quelle:"—",hinweis:"Auf das Entlastende zielen, nicht auf die Last. Konkrete Momente benennen lassen (jemand ist eingesprungen, ihr habt euch abgewechselt)."},
+    {id:"08-RE-03",phase:"Ressourcen",tiefe:"leicht",sf:"Plenum",frage:"Welche Art, mit Druck umzugehen, ist bei jemandem in der Übung gerade sichtbar geworden – etwas, das du gern hervorheben würdest?",fach:"Appreciative Inquiry (wertschätzende Ressourcen-Fokussierung, AI-COOPERRIDER); Resilienz-Coaching",quelle:"—",hinweis:"Verhaltensnah bleiben (‚hat ruhig sortiert', ‚hat Humor reingebracht'), kein Lob für ‚Typen'."},
+    {id:"08-TR-01",phase:"Transfer",tiefe:"mittel",sf:"Plenum",frage:"Welche eine Sache nehmt ihr euch vor, damit ihr euch im Alltag bei Druck gegenseitig mehr entlastet – und woran würdet ihr merken, dass es wirkt?",fach:"Erlebnispäd. Debriefing (Kolb: Anwenden, KOLB-1984); Lösungsfokus (kleinster Schritt)",quelle:"—",hinweis:"Auf EINE konkrete Sache eingrenzen (z.B. ‚früher Bescheid sagen, wenn es zu viel wird'). Das ‚woran merkt ihr es' macht es überprüfbar."},
+    {id:"08-TR-02",phase:"Transfer",tiefe:"tief",sf:"allein / Paar",frage:"Was tut dir selbst gut, wenn es stressig wird – und was davon möchtest du dir bewusster gönnen?",fach:"Lösungsfokus (SFBT) – wohlgeformte Zielfrage; Resilienz-Coaching (Selbstfürsorge)",quelle:"—",hinweis:"Wohlwollend und freiwillig. Aufs eigene Wohlbefinden gerichtet, kein Leistungsdruck. Kurz allein denken, dann optional teilen."}
+  ]},
+  {nr:9, ic:"🎯", name:"Fokus & Wahrnehmung", df:"Aufmerksamkeit steuern", obs:"🎯 Fokus ging verloren", fragen:[
+    {id:"09-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Wenn du an die Übung gerade denkst – worauf war deine Aufmerksamkeit am meisten gerichtet, und was ist eher untergegangen?",fach:"Achtsamkeit (Gewahrsein der eigenen Aufmerksamkeit); Facilitation",quelle:"—",hinweis:"Reihum sammeln, nichts bewerten. Es geht nur darum, wohin der eigene Fokus von selbst ging."},
+    {id:"09-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",frage:"Welches eine Wort beschreibt, wie fokussiert oder abgelenkt du dich in der Übung gerade gefühlt hast?",fach:"Facilitation (Ein-Wort-Blitzlicht / Check-in)",quelle:"—",hinweis:"Reihum, nur EIN Wort, keine Begründung."},
+    {id:"09-OE-03",phase:"Öffnen",tiefe:"mittel",sf:"Plenum",frage:"Gab es in der Übung gerade einen Moment, in dem du richtig bei der Sache warst – woran hast du das gemerkt?",fach:"Achtsamkeit (Wahrnehmung von Präsenz); Erleben sammeln (Kolb, KOLB-1984)",quelle:"—",hinweis:"Nur sammeln, noch nicht erklären. Konkret machen lassen, woran man Präsenz spürt (Zeit verging schnell, Umgebung ausgeblendet)."},
+    {id:"09-VE-01",phase:"Verstehen",tiefe:"mittel",sf:"Plenum",frage:"An welcher Stelle ist als Team vielleicht der Fokus verloren gegangen – und was hat möglicherweise dazu beigetragen, dass die Aufmerksamkeit abgewandert ist?",fach:"Systemische Beratung (Bedingungen statt Schuld); NLP-Milton-Modell (weichzeichnen)",quelle:"—",hinweis:"Weichzeichnen – auf ‚Was hat abgelenkt?' lenken, nicht auf ‚Wer war unkonzentriert?'. Umstände, nicht Personen."},
+    {id:"09-VE-02",phase:"Verstehen",tiefe:"tief",sf:"Plenum",frage:"Worauf richtet ihr im Alltag eher zuerst den Blick – auf das, was gerade fehlt, oder auf das, was schon geht?",fach:"Lösungsfokus (bewusste Aufmerksamkeitslenkung); Achtsamkeit",quelle:"—",hinweis:"Kein Richtig/Falsch – beides ist normal. Die Frage macht nur die eigene Blickrichtung bewusst. Als tiefere Option."},
+    {id:"09-RE-01",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Wann habt ihr in der Übung gerade den Fokus wiedergefunden, nachdem er kurz weg war – was hat geholfen, wieder reinzukommen?",fach:"Lösungsfokus (SFBT, de Shazer/Insoo Kim Berg, SFBT-DESHAZER) – Ausnahmen-Frage",quelle:"—",hinweis:"Auf das Wiederfinden zielen, nicht aufs Abschweifen. Konkret: Was hat geholfen (kurz innehalten, jemand hat zusammengefasst)?"},
+    {id:"09-RE-02",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Was hilft dir persönlich, dich zu sammeln, wenn viel auf einmal los ist?",fach:"Achtsamkeit / Resilienz-Coaching (eigene Fokus-Ressourcen)",quelle:"—",hinweis:"Eigene Strategien sichtbar machen (kurz durchatmen, eins nach dem anderen). Voneinander lernen lassen, ohne zu bewerten."},
+    {id:"09-RE-03",phase:"Ressourcen",tiefe:"leicht",sf:"Plenum",frage:"Wie hat jemand in der Übung gerade dazu beigetragen, dass ihr als Team beim Wesentlichen geblieben seid – etwas, das du hervorheben würdest?",fach:"Appreciative Inquiry (wertschätzende Ressourcen-Fokussierung, AI-COOPERRIDER)",quelle:"—",hinweis:"Verhaltensnah bleiben (‚hat zurück zum Ziel geholt', ‚hat das Wichtigste benannt'), kein Lob für ‚Typen'."},
+    {id:"09-TR-01",phase:"Transfer",tiefe:"mittel",sf:"Plenum",frage:"Welche eine Sache nehmt ihr euch vor, damit ihr im Alltag leichter beim Wesentlichen bleibt – und woran würdet ihr merken, dass es wirkt?",fach:"Erlebnispäd. Debriefing (Kolb: Anwenden, KOLB-1984); Lösungsfokus (kleinster Schritt)",quelle:"—",hinweis:"Auf EINE konkrete Sache eingrenzen (z.B. ‚zu Beginn das Ziel kurz benennen'). Das ‚woran merkt ihr es' macht es überprüfbar."},
+    {id:"09-TR-02",phase:"Transfer",tiefe:"tief",sf:"allein / Paar",frage:"Worauf möchtest du im Alltag bewusster deine Aufmerksamkeit richten – und was wäre dein erster kleiner Schritt?",fach:"Lösungsfokus (SFBT) – wohlgeformte Zielfrage / kleinster Schritt; Achtsamkeit",quelle:"—",hinweis:"Aufs eigene Tun gerichtet und klein halten. Kurz allein denken, dann optional zu zweit teilen."}
+  ]},
+  {nr:10, ic:"🎉", name:"Energie / Auflockerung", df:"Stimmung, Aktivierung", obs:"🎉 lief locker / überraschend gut", fragen:[
+    {id:"10-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",frage:"In einem Wort: Wie ist die Stimmung bei dir gerade nach der Übung?",fach:"Facilitation (Ein-Wort-Stimmungs-Blitzlicht / Check-in)",quelle:"—",hinweis:"Reihum, nur EIN Wort. Schnell und locker halten – nicht nachhaken."},
+    {id:"10-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",frage:"Daumen rauf, zur Seite oder runter – wie viel Energie hast du gerade?",fach:"Facilitation (Daumen-/Skalen-Blitzlicht)",quelle:"—",hinweis:"Rein nonverbal möglich – geht in 10 Sekunden. Gut, um schnell die Gruppenenergie zu sehen."},
+    {id:"10-OE-03",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Was hat in der Übung gerade am meisten Spaß gemacht oder dich zum Schmunzeln gebracht?",fach:"Facilitation (positive Aktivierung / Check-in)",quelle:"—",hinweis:"Locker sammeln, gern lachen lassen. Es geht ums Positive, nicht um Analyse."},
+    {id:"10-TR-01",phase:"Transfer",tiefe:"leicht",sf:"Plenum",frage:"Was nimmst du von dieser lockeren Stimmung mit in den nächsten Programmpunkt?",fach:"Facilitation (Übergang/Transfer light); Lösungsfokus (Ressource mitnehmen)",quelle:"—",hinweis:"Kurz halten – ein Satz reicht. Dient als Brücke zum nächsten Punkt, nicht als tiefe Reflexion."}
+  ]},
+  {nr:11, ic:"🚪", name:"Integration neuer Kolleg:innen", df:"ankommen lassen", obs:"🚪 neue Person (nicht) eingebunden", fragen:[
+    {id:"11-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Wenn du an die Übung gerade denkst – wann hast du dich als Teil des Teams gefühlt, und wann vielleicht eher noch ein bisschen außen vor?",fach:"Facilitation (Wahrnehmungs-Check-in); Gefühlsebene nach Gibbs' Reflexionszyklus (GIBBS-1988)",quelle:"—",hinweis:"Reihum sammeln, nichts kommentieren. Bewusst offen für alle – auch ‚alteingesessene' fühlen sich mal außen vor. Niemanden als ‚die/der Neue' markieren."},
+    {id:"11-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",frage:"Welches eine Wort beschreibt, wie willkommen oder zugehörig du dich in der Übung gerade gefühlt hast?",fach:"Facilitation (Ein-Wort-Blitzlicht / Check-in)",quelle:"—",hinweis:"Reihum, nur EIN Wort, keine Begründung. Gilt für alle gleich, nicht nur für neue Personen."},
+    {id:"11-OE-03",phase:"Öffnen",tiefe:"mittel",sf:"Plenum",frage:"Gab es in der Übung gerade einen Moment, in dem jemand bewusst eingebunden wurde oder von selbst dazugekommen ist – einer, der dir aufgefallen ist?",fach:"Achtsamkeits-/Wahrnehmungs-Check-in (Facilitation); Erleben sammeln (Kolb, KOLB-1984)",quelle:"—",hinweis:"Nur sammeln, noch nicht bewerten. Auch kleine Gesten zählen (jemand hat erklärt, Platz gemacht, nachgefragt)."},
+    {id:"11-VE-01",phase:"Verstehen",tiefe:"mittel",sf:"Plenum",frage:"An welcher Stelle ist es als Team vielleicht noch nicht so leicht, dass neue Leute wirklich ankommen – und was trägt möglicherweise dazu bei?",fach:"Systemische Beratung (Bedingungen statt Schuld); NLP-Milton-Modell (weichzeichnen)",quelle:"—",hinweis:"Weichzeichnen – auf Umstände lenken (eingespielte Routinen, wenig Zeit), nicht auf Personen. Nicht in Richtung ‚wer grenzt aus' fragen."},
+    {id:"11-VE-02",phase:"Verstehen",tiefe:"tief",sf:"Plenum",frage:"Stell dir vor, jemand kommt ganz neu zu euch – was würde die Person in der ersten Woche schnell verstehen, und was vielleicht erst nach längerer Zeit?",fach:"Systemische Beratung (Beobachter-/zirkuläre Perspektive – schafft Distanz und Schutz)",quelle:"—",hinweis:"Schafft Abstand – niemand muss von sich selbst sprechen. Macht ungeschriebene Regeln sichtbar (was man bei euch ‚einfach so' weiß). Als tiefere Option."},
+    {id:"11-RE-01",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Wann hat sich in der Übung gerade jemand gut aufgenommen gefühlt – was habt ihr da gemacht, das es leicht gemacht hat?",fach:"Lösungsfokus (SFBT, de Shazer/Insoo Kim Berg, SFBT-DESHAZER) – Ausnahmen-Frage",quelle:"—",hinweis:"Konkret werden lassen: nicht ‚war nett', sondern was genau geholfen hat (jemand hat vorgestellt, Aufgaben erklärt, mitgenommen)."},
+    {id:"11-RE-02",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Was kann euer Team gut, wenn es darum geht, jemanden willkommen zu heißen – worauf könnt ihr bauen?",fach:"Appreciative Inquiry (vorhandene Stärken sichtbar machen, AI-COOPERRIDER); Resilienz-Coaching",quelle:"—",hinweis:"Auf das Vorhandene zielen, nicht aufs Fehlende. Stärkt das Selbstbild als aufnahmefähiges Team."},
+    {id:"11-RE-03",phase:"Ressourcen",tiefe:"leicht",sf:"Plenum",frage:"Was bringt eine neue Person eigentlich mit, das dem Team guttun kann – ein frischer Blick, eine andere Erfahrung?",fach:"Appreciative Inquiry (Ressourcen der neuen Perspektive heben, AI-COOPERRIDER); Systemische Beratung",quelle:"—",hinweis:"Dreht die Richtung um: Neue bereichern, sind nicht nur ‚einzuarbeiten'. Verhaltensnah und wertschätzend, ohne die Person vorzuführen."},
+    {id:"11-TR-01",phase:"Transfer",tiefe:"mittel",sf:"Plenum",frage:"Welche eine Sache nehmt ihr euch vor, damit neue Leute bei euch im Alltag schneller ankommen – und woran würdet ihr merken, dass sie wirkt?",fach:"Erlebnispäd. Debriefing (Kolb: Anwenden, KOLB-1984); Lösungsfokus (kleinster Schritt)",quelle:"—",hinweis:"Auf EINE konkrete Sache eingrenzen (z.B. feste Ansprechperson, kurze Vorstellrunde). Das ‚woran merkt ihr es' macht es überprüfbar."},
+    {id:"11-TR-02",phase:"Transfer",tiefe:"tief",sf:"allein / Paar",frage:"Was kannst du selbst tun, damit sich jemand Neues bei euch schneller wohl und dazugehörig fühlt?",fach:"Lösungsfokus (SFBT) – wohlgeformte Zielfrage; Selbstverantwortungs-Fokus",quelle:"—",hinweis:"Aufs eigene Tun gerichtet und klein halten (einmal zum Mittagessen mitnehmen, Fragen anbieten). Kurz allein denken, dann optional teilen."}
+  ]},
+  {nr:12, ic:"🎒", name:"Transfer in den Alltag", df:"Aha-Moment → Handeln", obs:"🎒 starker Aha-Moment zum Mitnehmen", fragen:[
+    {id:"12-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Wenn du auf die Übungen heute zurückblickst – welcher Moment oder welche Erkenntnis ist dir am stärksten geblieben?",fach:"Facilitation (Ernte-Check-in); Erleben sichern (Kolb: reflektierende Beobachtung, KOLB-1984)",quelle:"—",hinweis:"Reihum sammeln, nichts bewerten. Geht ums Festhalten, noch nicht ums Vornehmen."},
+    {id:"12-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",frage:"In einem Wort: Was nimmst du heute fürs Team mit?",fach:"Facilitation (Ein-Wort-Blitzlicht / Check-out)",quelle:"—",hinweis:"Reihum, nur EIN Wort. Verdichtet, was hängen geblieben ist."},
+    {id:"12-VE-01",phase:"Verstehen",tiefe:"mittel",sf:"Plenum",frage:"Was sorgt im Alltag manchmal dafür, dass gute Vorsätze aus solchen Runden wieder verpuffen – woran liegt das meistens?",fach:"Systemische Beratung (Bedingungen erkennen); Lösungsfokus (Hindernisse vorab benennen)",quelle:"—",hinweis:"Normalisieren – das passiert jedem Team. Auf Umstände lenken (Alltagstempo, keine Erinnerung), nicht auf Schuld. Hilft, den Vorsatz gleich alltagstauglich zu machen."},
+    {id:"12-RE-01",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Wann habt ihr früher schon einmal etwas wirklich in den Alltag übernommen – was hat damals geholfen, dass es nicht im Sand verlaufen ist?",fach:"Lösungsfokus (SFBT, de Shazer/Insoo Kim Berg, SFBT-DESHAZER) – Ausnahmen-/Ressourcenfrage",quelle:"—",hinweis:"Auf das Gelungene zielen. Konkret: Was hat getragen (jemand hat erinnert, es stand sichtbar, ihr habt es kurz gehalten)?"},
+    {id:"12-TR-01",phase:"Transfer",tiefe:"mittel",sf:"Plenum",frage:"Was ist die eine Sache, die ihr als Team ab morgen konkret anders machen wollt – klein genug, dass sie wirklich passiert?",fach:"Erlebnispäd. Debriefing (Kolb: aktives Experimentieren/Anwenden, KOLB-1984); Lösungsfokus (kleinster wirksamer Schritt)",quelle:"—",hinweis:"Auf EINE Sache eingrenzen und bewusst klein halten – lieber machbar als ehrgeizig. Konkret und beobachtbar formulieren."},
+    {id:"12-TR-02",phase:"Transfer",tiefe:"mittel",sf:"Plenum",frage:"Woran und wann wollt ihr überprüfen, ob ihr drangeblieben seid – und wer erinnert das Team daran?",fach:"Lösungsfokus (Verbindlichkeit / woran-merkst-du-es / Monitoring)",quelle:"—",hinweis:"Das ist der Unterschied zwischen Vorsatz und Veränderung: einen konkreten Zeitpunkt und eine erinnernde Person festlegen. Freiwillig, aber konkret."},
+    {id:"12-TR-03",phase:"Transfer",tiefe:"tief",sf:"allein / Paar",frage:"Was ist dein persönlicher erster kleiner Schritt – und wann genau machst du ihn?",fach:"Lösungsfokus (SFBT) – kleinster nächster Schritt mit Zeitanker; Selbstverantwortungs-Fokus",quelle:"—",hinweis:"Aufs eigene Tun gerichtet, klein und mit Zeitpunkt (‚morgen früh', ‚in der nächsten Sitzung'). Kurz allein denken, dann optional teilen."}
+  ]},
+  {nr:13, ic:"🌡️", name:"Verantwortung für die Teamstimmung", df:"eigenes Verhalten färbt das Klima", obs:"🌡️ Stimmung kippte / hob sich spürbar", fragen:[
+    {id:"13-OE-01",phase:"Öffnen",tiefe:"leicht",sf:"Plenum",frage:"Wenn du an die Übung gerade denkst – wie war die Stimmung im Team, und hat sie sich zwischendurch verändert?",fach:"Facilitation (Wahrnehmungs-Check-in); Gefühlsebene nach Gibbs' Reflexionszyklus (GIBBS-1988)",quelle:"—",hinweis:"Reihum sammeln, nichts kommentieren. Es geht ums gemeinsame Wahrnehmen der Stimmung, noch nicht um Gründe."},
+    {id:"13-OE-02",phase:"Öffnen",tiefe:"leicht",sf:"Blitzlicht",frage:"Welches eine Wort beschreibt, welche Stimmung du selbst in die Übung gerade mit reingebracht hast?",fach:"Facilitation (Ein-Wort-Blitzlicht); Selbstwahrnehmung (Achtsamkeit)",quelle:"—",hinweis:"Reihum, nur EIN Wort. Bewusst auf sich selbst gerichtet – das öffnet sanft fürs Thema Eigenanteil, ohne Vorwurf."},
+    {id:"13-OE-03",phase:"Öffnen",tiefe:"mittel",sf:"Plenum",frage:"Gab es in der Übung gerade einen Moment, in dem die Stimmung spürbar gekippt ist – nach oben oder nach unten?",fach:"Achtsamkeits-/Wahrnehmungs-Check-in (Facilitation); Erleben sammeln (Kolb, KOLB-1984)",quelle:"—",hinweis:"Nur sammeln, noch nicht erklären oder zuordnen. Beide Richtungen zählen – auch ein Aufhellen ist ein Kippmoment."},
+    {id:"13-VE-01",phase:"Verstehen",tiefe:"mittel",sf:"Plenum",frage:"Was hat als Team vielleicht dazu beigetragen, dass sich die Stimmung in die eine oder andere Richtung entwickelt hat?",fach:"Systemische Beratung (Bedingungen statt Schuld); NLP-Milton-Modell (weichzeichnen)",quelle:"—",hinweis:"Weichzeichnen – auf ‚Was hat dazu beigetragen?' lenken, nie auf ‚Wer war schuld an der schlechten Laune?'. Klima ist Gemeinschaftssache."},
+    {id:"13-VE-02",phase:"Verstehen",tiefe:"tief",sf:"Plenum",frage:"Wie wirkt sich eurer Erfahrung nach die Stimmung Einzelner auf das ganze Team aus – fällt euch dazu etwas aus der Übung gerade ein?",fach:"Org.-Psychologie (Brille: emotionale Ansteckung / „Ripple Effect" nach Barsade); Systemische Beratung",quelle:"—",hinweis:"Als Erfahrungsfrage stellen, nicht als Lehrsatz – das Team entdeckt den Effekt selbst. Niemanden für ‚schlechte Stimmung' verantwortlich machen. Als tiefere Option."},
+    {id:"13-RE-01",phase:"Ressourcen",tiefe:"mittel",sf:"Plenum",frage:"Wann hat in der Übung gerade jemand die Stimmung spürbar gehoben – was genau hat die Person getan?",fach:"Lösungsfokus (SFBT, de Shazer/Insoo Kim Berg, SFBT-DESHAZER) – Ausnahmen-Frage; Appreciative Inquiry",quelle:"—",hinweis:"Verhaltensnah und konkret (‚hat gelacht', ‚hat Mut gemacht', ‚hat ruhig weitergemacht'), kein Lob für ‚Typen'. Macht sichtbar, was Stimmung hebt."},
+    {id:"13-RE-02",phase:"Ressourcen",tiefe:"tief",sf:"Plenum",frage:"Was hilft euch als Team, zuversichtlich zu bleiben, wenn mal etwas nicht klappt?",fach:"Resilienz-Coaching (kollektive Zuversicht als Ressource); Lösungsfokus",quelle:"—",hinweis:"Auf das Tragende zielen, nicht auf den Frust. Antworten stehen lassen – sie zeigen, woran das Team in schweren Momenten anknüpfen kann."},
+    {id:"13-RE-03",phase:"Ressourcen",tiefe:"leicht",sf:"Plenum",frage:"Wer hat in der Übung gerade durch Ruhe, Humor oder Ermutigung gutgetan – etwas, das du gern hervorheben würdest?",fach:"Appreciative Inquiry (wertschätzende Ressourcen-Fokussierung, AI-COOPERRIDER)",quelle:"—",hinweis:"Verhaltensnah bleiben, an konkretem Tun festmachen. Wertschätzung fürs positive Vorbild, ohne andere im Umkehrschluss abzuwerten."},
+    {id:"13-TR-01",phase:"Transfer",tiefe:"mittel",sf:"Plenum",frage:"Welche eine Sache nehmt ihr euch vor, damit ihr im Alltag bewusster auf eine gute Stimmung achtet – und woran würdet ihr merken, dass es wirkt?",fach:"Erlebnispäd. Debriefing (Kolb: Anwenden, KOLB-1984); Lösungsfokus (kleinster Schritt)",quelle:"—",hinweis:"Auf EINE konkrete Sache eingrenzen (z.B. ‚morgens kurz ankommen, bevor's losgeht'). Das ‚woran merkt ihr es' macht es überprüfbar."},
+    {id:"13-TR-02",phase:"Transfer",tiefe:"tief",sf:"allein / Paar",frage:"Was möchtest du selbst beitragen, damit die Stimmung im Team gut bleibt – gerade an schwierigen Tagen?",fach:"Lösungsfokus (SFBT) – wohlgeformte Zielfrage; Selbstverantwortungs-/Vorbild-Fokus",quelle:"—",hinweis:"Kern des Themas: der eigene Beitrag zum Klima. Aufs eigene Verhalten gerichtet, wohlwollend, kein Zwang zur Dauer-Gutelaune. Kurz allein denken, dann optional teilen."}
+  ]}
+];
+
+/* Universal-Bookends als POOL (antippen wechselt durch; „+ gefragt" merkt Nutzung über den Tag).
+   ENTWURF v1 – von Marco fachlich freizugeben. Methode = Facilitation-Check-in/-out (kein Wirknachweis → quelle „—"). */
+const BOOK_START = [
+  {id:"UNI-START-1", frage:"In einem Wort: Wie war die Übung gerade für dich?", fach:"Facilitation (Ein-Wort-Blitzlicht / Check-in)"},
+  {id:"UNI-START-2", frage:"Wenn die Übung gerade ein Wetter gewesen wäre – welches war sie für dich?", fach:"Facilitation (Metaphern-/Bild-Check-in); Gibbs (Gefühlsebene, GIBBS-1988)"},
+  {id:"UNI-START-3", frage:"Daumen rauf, zur Seite oder runter – wie ging es dir in der Übung gerade?", fach:"Facilitation (Daumen-/Skalen-Blitzlicht, körperlich-niedrigschwellig)"},
+  {id:"UNI-START-4", frage:"Welcher Moment aus der Übung gerade ist dir am meisten hängen geblieben – in einem Satz?", fach:"Achtsamkeits-/Wahrnehmungs-Check-in (Facilitation); Erleben sammeln (Kolb, KOLB-1984)"}
+];
+const BOOK_END = [
+  {id:"UNI-END-1", frage:"Was ist die eine Sache, die jede:r von euch aus der Übung gerade mitnimmt?", fach:"Erlebnispäd. Debriefing (Kolb: Anwenden, KOLB-1984); Lösungsfokus"},
+  {id:"UNI-END-2", frage:"Wenn du einen Satz aus der Übung gerade mit in den Alltag nimmst – wie lautet er?", fach:"Lösungsfokus (SFBT) – Transfer in die eigene Sprache; Kolb (Anwenden)"},
+  {id:"UNI-END-3", frage:"Was davon möchtest du schon diese Woche einmal ausprobieren?", fach:"Lösungsfokus (SFBT) – kleinster nächster Schritt; Kolb (Anwenden)"},
+  {id:"UNI-END-4", frage:"In einem Wort: Womit gehst du aus dieser Runde raus?", fach:"Facilitation (Ein-Wort-Check-out)"}
+];
+
+/* Anzeige-Reihenfolge der Themen (Vorschlag, quellen-gestützt: Kommunikation/Vertrauen/
+   Zusammenarbeit sind die meistgenannten Teamentwicklungs-Ziele). Nr/IDs bleiben unverändert.
+   SONDER = Sonderformate (andere Kategorie): 10 Energie/Energizer, 12 Transfer (steckt in jeder Phase 4). */
+const DISPLAY_ORDER = [2,1,3,7,5,6,4,11,8,9,13,10,12];
+const SONDER = new Set([10,12]);
+const KERN_ORDER = DISPLAY_ORDER.filter(n=>!SONDER.has(n));
+const SONDER_ORDER = DISPLAY_ORDER.filter(n=>SONDER.has(n));
+
+/* ============ STATE (localStorage, on-device) ============ */
+const LS="rn_state_v1";
+let S = load();
+function load(){ try{return JSON.parse(localStorage.getItem(LS))||{}}catch(e){return {}} }
+function save(){ localStorage.setItem(LS, JSON.stringify(S)); }
+S.prep=S.prep||[]; S.obs=S.obs||[]; S.notes=S.notes||{}; S.done=S.done||[]; S.refNotes=S.refNotes||{};
+S.qSel=S.qSel||{};   // pro Frage: wurde sie gestellt? key=qid
+S.qNote=S.qNote||{}; // pro Frage: Notiz des Trainers (kommt ins Team-Teilen). key=qid
+S.bsIdx=S.bsIdx||0;  S.beIdx=S.beIdx||0;   // aktuell gezeigte Universalfrage (Index im Pool)
+S.uniSel=S.uniSel||{};                     // welche Universalfragen heute „gefragt"? key=id
+S.endInSum=S.endInSum||false;              // Universal-Transfer in die Zusammenfassung aufnehmen?
+S.endNote=S.endNote||{};                   // Notiz zur aufgenommenen Transferfrage, key=id
+const T = nr => THEMEN.find(t=>t.nr===nr);
+
+/* ============ THEME TOGGLE ============ */
+const TK="rn_theme";
+function applyTheme(t){ document.documentElement.setAttribute('data-theme',t);
+  document.getElementById('themeToggle').textContent = t==='dark'?'☀️':'🌙'; }
+applyTheme(localStorage.getItem(TK)||'dark');
+document.getElementById('themeToggle').onclick=()=>{
+  const next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+  localStorage.setItem(TK,next); applyTheme(next);
+};
+
+/* ============ NAV ============ */
+let CURRENT='start';
+function go(id, scrollToId){
+  CURRENT=id;
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const map={start:'start',prep:'prep',live:'live',reflect:'reflect',bogen:'reflect'};
+  document.querySelectorAll('.snav').forEach(b=>b.classList.toggle('active', !!b.dataset.go && b.dataset.go===map[id]));
+  document.body.dataset.section = map[id];   // Sektionsfarbe (Header-Akzent etc.), inkl. 'start'
+  if(id==='prep') renderPrep();
+  if(id==='live') renderLive();
+  if(id==='reflect') renderAgenda();
+  if(scrollToId){ const el=document.getElementById(scrollToId); if(el){ el.scrollIntoView({behavior:'smooth',block:'start'}); return; } }
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+document.addEventListener('click', e=>{
+  const g=e.target.closest('[data-go]'); if(g){ go(g.dataset.go); }
+  if(e.target.closest('[data-clear]')) clearAll();
+});
+/* Reset (roter X im Header, auf jeder Seite) */
+document.getElementById('resetBtn').onclick=clearAll;
+/* Erklärtext-Toggles (auf jeder Seite, klar anklickbar) */
+document.querySelectorAll('.infotgl').forEach(b=>{
+  b.onclick=()=>{
+    const box=document.getElementById(b.dataset.info);
+    const opening=box.hasAttribute('hidden');
+    if(opening) box.removeAttribute('hidden'); else box.setAttribute('hidden','');
+    b.classList.toggle('open',opening);
+  };
+});
+
+/* ============ PREP ============ */
+function prepCard(t){
+  const on=S.prep.includes(t.nr);
+  const stub = t.fragen.length? '' : ' <span class="stub">(Fragen folgen)</span>';
+  const d=document.createElement('button');
+  d.className='tcard'+(on?' on':'');
+  d.innerHTML=`<span class="ic">${t.ic}</span><span><span class="nm">${t.name}${stub}</span><span class="df">${t.df}</span></span><span class="check">✓</span>`;
+  d.onclick=()=>{ toggle(S.prep,t.nr); save(); renderPrep(); };
+  return d;
+}
+function renderPrep(){
+  const k=document.getElementById('prepGrid'); k.innerHTML='';
+  KERN_ORDER.forEach(nr=>k.appendChild(prepCard(T(nr))));
+  const s=document.getElementById('prepGridSonder'); s.innerHTML='';
+  SONDER_ORDER.forEach(nr=>s.appendChild(prepCard(T(nr))));
+  document.getElementById('prepCount').textContent = `${S.prep.length} ausgewählt`;
+}
+
+/* ============ LIVE (kein doppeltes Icon mehr) ============ */
+function renderLive(){
+  const el=document.getElementById('obsGrid'); el.innerHTML='';
+  DISPLAY_ORDER.forEach(nr=>{
+    const t=T(nr);
+    const on=S.obs.includes(t.nr);
+    const prepHint = S.prep.includes(t.nr)? '<span class="badge" style="background:var(--soft);color:var(--prep)">angepeilt</span>':'';
+    const d=document.createElement('div');
+    d.className='obs'+(on?' on':'');
+    d.innerHTML=`<div class="head"><span class="lbl">${t.obs}</span><span class="sub">${prepHint}${t.name}</span></div>
+      <textarea class="note" placeholder="kurze Notiz (z.B. ‚Person XY hat …') – bleibt lokal">${S.notes[t.nr]||''}</textarea>`;
+    d.querySelector('.head').onclick=()=>{ toggle(S.obs,t.nr); save(); renderLive(); };
+    const ta=d.querySelector('.note');
+    ta.oninput=()=>{ S.notes[t.nr]=ta.value; save(); };
+    el.appendChild(d);
+  });
+  document.getElementById('obsCount').textContent=S.obs.length;
+}
+
+/* ============ REFLEXION / AGENDA ============ */
+function renderAgenda(){
+  const el=document.getElementById('agenda'); el.innerHTML='';
+  const set=new Set([...S.prep, ...S.obs]);
+  const list = DISPLAY_ORDER.filter(nr=>set.has(nr));
+  document.getElementById('agendaEmpty').style.display = list.length? 'none':'block';
+  list.forEach(nr=>{
+    const t=T(nr); const note=S.notes[nr]; const done=S.done.includes(nr);
+    const origs=[];
+    if(S.prep.includes(nr)) origs.push('<span class="orig" title="in der Vorbereitung als Ziel gewählt"><span class="gi">🎯</span> Vorbereitung</span>');
+    if(S.obs.includes(nr))  origs.push('<span class="orig" title="live beobachtet"><span class="gi">🔍</span> beobachtet</span>');
+    const a=document.createElement('div'); a.className='aitem';
+    a.innerHTML=`<span class="ic">${t.ic}</span>
+      <span style="flex:1"><span class="nm">${t.name}</span>
+        <span class="origs">${origs.join('')}</span>
+        ${note?`<span class="nt" style="display:block;margin-top:3px">📝 ${escapeHtml(note)}</span>`:''}</span>
+      ${done?'<span class="done">✓ reflektiert</span>':''}
+      <button class="btn sm">${done?'nochmal':'starten'} →</button>`;
+    a.querySelector('button').onclick=()=>openBogen(nr);
+    el.appendChild(a);
+  });
+  const fg=document.getElementById('freeGrid'); fg.innerHTML='';
+  DISPLAY_ORDER.forEach(nr=>{ const t=T(nr);
+    const stub=t.fragen.length?'':' <span class="stub">(folgt)</span>';
+    const d=document.createElement('button'); d.className='tcard';
+    d.innerHTML=`<span class="ic">${t.ic}</span><span><span class="nm">${t.name}${stub}</span></span>`;
+    d.onclick=()=>{ if(!S.obs.includes(t.nr)){S.obs.push(t.nr);save();} openBogen(t.nr); };
+    fg.appendChild(d);
+  });
+  renderBookends();
+}
+
+/* ============ UNIVERSAL-BOOKENDS (Pool, wechselbar) ============ */
+function uniUsed(pool){ return pool.filter(q=>S.uniSel[q.id]).length; }
+function renderBookends(){
+  const bs=BOOK_START[S.bsIdx % BOOK_START.length];
+  const be=BOOK_END[S.beIdx % BOOK_END.length];
+  document.getElementById('bookStartText').textContent='„'+bs.frage+'"';
+  document.getElementById('bookEndText').textContent='„'+be.frage+'"';
+  const bsP=document.getElementById('bsPick'), beP=document.getElementById('bePick');
+  bsP.textContent=S.uniSel[bs.id]?'✓ gefragt':'+ gefragt'; bsP.classList.toggle('on',!!S.uniSel[bs.id]);
+  beP.textContent=S.uniSel[be.id]?'✓ gefragt':'+ gefragt'; beP.classList.toggle('on',!!S.uniSel[be.id]);
+  document.getElementById('bsUsed').textContent=`${uniUsed(BOOK_START)}/${BOOK_START.length} heute genutzt`;
+  document.getElementById('beUsed').textContent=`${uniUsed(BOOK_END)}/${BOOK_END.length} heute genutzt`;
+  const cb=document.getElementById('endInSum'), nt=document.getElementById('endNote');
+  cb.checked=!!S.endInSum; nt.style.display=S.endInSum?'block':'none'; nt.value=S.endNote[be.id]||'';
+}
+
+/* ============ BOGEN (stepper + Phasen-Notizen) ============ */
+let cur={nr:null, step:0};
+function openBogen(nr){
+  cur={nr, step:0}; const t=T(nr);
+  document.getElementById('bogenTitle').textContent=`${t.ic} ${t.name}`;
+  const np=document.getElementById('bogenNote');
+  if(S.notes[nr]){ np.style.display='block'; np.innerHTML=`<div class="eyebrow">📝 Deine Live-Notiz</div>${escapeHtml(S.notes[nr])}`; }
+  else np.style.display='none';
+  go('bogen'); renderStep();
+}
+function renderStep(){
+  window.scrollTo({top:0,behavior:'smooth'});   // immer oben starten, nicht beim Weiter-Button hängen bleiben
+  const t=T(cur.nr);
+  const sp=document.getElementById('stepper'); sp.innerHTML='';
+  PHASEN.forEach((p,i)=>{
+    const b=document.createElement('div');
+    b.className=`step ${p.key}`+(i===cur.step?' active':'')+(i<cur.step?' done':'');
+    b.textContent=`${i+1}. ${p.label}`;
+    b.onclick=()=>{cur.step=i; renderStep();};
+    sp.appendChild(b);
+  });
+  const ph=PHASEN[cur.step];
+  const qs=t.fragen.filter(q=>phaseKey(q.phase)===ph.key);
+  const body=document.getElementById('bogenBody'); body.innerHTML='';
+  if(!t.fragen.length){
+    body.innerHTML=`<div class="empty">✍️ Fragen für <b>${t.name}</b> sind noch in Produktion.<br>Struktur & Ablauf kannst du hier schon am Thema <b>Kommunikation</b> sehen.</div>`;
+  } else if(!qs.length){
+    body.innerHTML=`<div class="empty">Für diese Phase sind hier (noch) keine Fragen hinterlegt.</div>`;
+  } else {
+    const intro=document.createElement('p'); intro.className='phasehdr';
+    intro.textContent='Such dir die Fragen aus, die zu dem passen, was du beobachtet hast – du musst nicht alle stellen. Tippe „+ gefragt", um eine Frage (mit Notiz) in die Team-Zusammenfassung zu nehmen.';
+    body.appendChild(intro);
+    qs.forEach(q=>{
+      const picked = !!S.qSel[q.id];
+      const d=document.createElement('div'); d.className=`q ${ph.key}`+(picked?' picked':'');
+      d.innerHTML=`
+        <div class="meta"><span class="pill" style="background:var(--soft);color:var(--muted)">${q.id}</span>
+          <span class="badge">Tiefe: ${q.tiefe}</span><span class="badge">${q.sf}</span>
+          <button class="pickbtn">${picked?'✓ gefragt':'+ gefragt'}</button></div>
+        <div class="qtext">„${q.frage}"</div>
+        ${q.hinweis?`<div class="hint">💡 ${q.hinweis}</div>`:''}
+        <button class="srcbtn">Quelle / Herkunft anzeigen</button>
+        <div class="src"><b>Herkunft (Methode):</b> ${q.fach}<br><b>Wissenschaftliche Quelle:</b> ${q.quelle==='—'?'— (keine Tatsachenbehauptung)':q.quelle}</div>
+        <div class="qnote" style="display:${picked?'block':'none'}">
+          <label>📝 Notiz zu dieser Frage – kommt in die Team-Zusammenfassung</label>
+          <textarea placeholder="Was wurde zu dieser Frage gesagt / beschlossen?">${escapeHtml(S.qNote[q.id]||'')}</textarea>
+        </div>`;
+      const sb=d.querySelector('.srcbtn'), sr=d.querySelector('.src');
+      sb.onclick=()=>{ sr.classList.toggle('show'); sb.textContent=sr.classList.contains('show')?'Quelle / Herkunft verbergen':'Quelle / Herkunft anzeigen'; };
+      const pb=d.querySelector('.pickbtn'), qn=d.querySelector('.qnote');
+      pb.onclick=()=>{
+        const now=!S.qSel[q.id];
+        if(now) S.qSel[q.id]=true; else delete S.qSel[q.id];
+        save();
+        d.classList.toggle('picked',now);
+        pb.textContent=now?'✓ gefragt':'+ gefragt';
+        qn.style.display=now?'block':'none';
+      };
+      const qta=qn.querySelector('textarea');
+      qta.oninput=()=>{ S.qNote[q.id]=qta.value; save(); };
+      body.appendChild(d);
+    });
+  }
+
+  const prev=document.getElementById('prevStep'), next=document.getElementById('nextStep');
+  prev.style.visibility = cur.step===0?'hidden':'visible';
+  next.textContent = cur.step===PHASEN.length-1 ? 'Thema abschließen ✓' : 'nächste Phase →';
+  prev.onclick=()=>{ if(cur.step>0){cur.step--; renderStep();} };
+  next.onclick=()=>{
+    if(cur.step<PHASEN.length-1){ cur.step++; renderStep(); }
+    else { if(!S.done.includes(cur.nr)){S.done.push(cur.nr);save();} go('reflect','agenda'); }
+  };
+}
+
+/* ============ ZUSAMMENFASSUNG / TEILEN ============ */
+function buildSummary(){
+  // Geteilt wird NUR Gewähltes:
+  //  - als „gefragt" markierte Reflexionsfragen + ihre Notizen
+  //  - die Universal-Transferfrage NUR, wenn ausdrücklich aufgenommen (S.endInSum)
+  // NICHT geteilt: Universal-Einstiegsfragen (da schreibt man nichts mit) und private Live-Notizen.
+  // *Sternchen* = fett in WhatsApp/Signal/Slack.
+  const d=new Date().toLocaleDateString('de-DE');
+  const L=[`*TEAM-REFLEXION · ${d}*`,''];
+  let any=false;
+  DISPLAY_ORDER.forEach(nr=>{
+    const t=T(nr);
+    const picked=t.fragen.filter(q=>S.qSel[q.id]);
+    if(!picked.length) return;
+    any=true;
+    L.push(`*${t.name}*`,'');
+    PHASEN.forEach(p=>{
+      picked.filter(q=>phaseKey(q.phase)===p.key).forEach(q=>{
+        L.push(`„${q.frage}"`);
+        if(S.qNote[q.id]) L.push(`→ ${S.qNote[q.id]}`);
+        L.push('');
+      });
+    });
+  });
+  if(!any) L.push('(Noch keine Frage als „gefragt" markiert – im Reflexions-Bogen die passenden Fragen auswählen.)','');
+  if(S.endInSum){
+    const be=BOOK_END[S.beIdx % BOOK_END.length];
+    L.push('*Abschluss / Transfer*','',`„${be.frage}"`);
+    if(S.endNote[be.id]) L.push(`→ ${S.endNote[be.id]}`);
+    L.push('');
+  }
+  return L.join('\n').replace(/\n{3,}/g,'\n\n').trim();
+}
+const overlay=document.getElementById('overlay');
+const NAVMAP={start:'start',prep:'prep',live:'live',reflect:'reflect',bogen:'reflect'};
+function openShare(){
+  document.getElementById('summaryText').value=buildSummary();
+  overlay.classList.add('show');
+  document.querySelectorAll('.snav').forEach(b=>b.classList.remove('active'));
+  document.getElementById('shareNav').classList.add('active');   // „Teilen" als aktiver Schritt
+  document.body.dataset.section='teilen';
+}
+function closeShare(){
+  overlay.classList.remove('show');
+  document.querySelectorAll('.snav').forEach(b=>b.classList.toggle('active', !!b.dataset.go && b.dataset.go===NAVMAP[CURRENT]));
+  document.body.dataset.section=NAVMAP[CURRENT];
+}
+document.getElementById('shareBtn').onclick=openShare;
+document.getElementById('shareNav').onclick=openShare;
+document.getElementById('closeModal').onclick=closeShare;
+document.getElementById('backBtn').onclick=()=>{ overlay.classList.remove('show'); go('reflect','agenda'); };
+overlay.onclick=e=>{ if(e.target===overlay) closeShare(); };
+document.getElementById('copyNow').onclick=async()=>{
+  const txt=document.getElementById('summaryText').value;
+  try{ await navigator.clipboard.writeText(txt); }
+  catch(e){ const ta=document.getElementById('summaryText'); ta.select(); document.execCommand('copy'); }
+  const m=document.getElementById('copyMsg'); m.style.display='inline-block'; setTimeout(()=>m.style.display='none',1800);
+};
+document.getElementById('shareNow').onclick=async()=>{
+  const text=document.getElementById('summaryText').value;
+  if(navigator.share){ try{ await navigator.share({title:'Team-Reflexion', text}); }catch(e){} }
+  else { document.getElementById('copyNow').click(); alert('Teilen wird von diesem Browser nicht direkt unterstützt – die Zusammenfassung wurde stattdessen kopiert.'); }
+};
+
+/* ============ Universal-Bookends: Steuerung (einmal verdrahtet) ============ */
+document.getElementById('bsCycle').onclick=()=>{ S.bsIdx=(S.bsIdx+1)%BOOK_START.length; save(); renderBookends(); };
+document.getElementById('beCycle').onclick=()=>{ S.beIdx=(S.beIdx+1)%BOOK_END.length; save(); renderBookends(); };
+document.getElementById('bsPick').onclick=()=>{ const id=BOOK_START[S.bsIdx%BOOK_START.length].id; if(S.uniSel[id])delete S.uniSel[id]; else S.uniSel[id]=true; save(); renderBookends(); };
+document.getElementById('bePick').onclick=()=>{ const id=BOOK_END[S.beIdx%BOOK_END.length].id; if(S.uniSel[id])delete S.uniSel[id]; else S.uniSel[id]=true; save(); renderBookends(); };
+document.getElementById('endInSum').onchange=e=>{ S.endInSum=e.target.checked; save(); document.getElementById('endNote').style.display=S.endInSum?'block':'none'; };
+document.getElementById('endNote').oninput=e=>{ const id=BOOK_END[S.beIdx%BOOK_END.length].id; S.endNote[id]=e.target.value; save(); };
+/* Frei wählbares Thema ein-/ausklappen */
+document.getElementById('freeToggle').onclick=()=>{
+  const g=document.getElementById('freeGrid'), b=document.getElementById('freeToggle');
+  const show=g.style.display==='none' || !g.style.display;
+  g.style.display=show?'grid':'none';
+  b.textContent=show?'➖ Themenauswahl schließen':'➕ Weiteres Thema frei wählen';
+};
+
+/* ============ helpers ============ */
+function toggle(arr,v){ const i=arr.indexOf(v); if(i<0)arr.push(v); else arr.splice(i,1); }
+function escapeHtml(s){ return s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function clearAll(){
+  if(!confirm('Alle Markierungen und Notizen auf diesem Gerät löschen?')) return;
+  S={prep:[],obs:[],notes:{},done:[],refNotes:{},qSel:{},qNote:{},bsIdx:0,beIdx:0,uniSel:{},endInSum:false,endNote:{}}; save();
+  renderPrep(); renderLive(); renderAgenda();   // aktive Seite sofort aktualisieren, egal wo der Reset gedrückt wurde
+}
+go('start');
+</script>
+</body>
+</html>
