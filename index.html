@@ -104,8 +104,8 @@
   .tcard:hover{border-color:var(--prep)}
   .tcard.on{border-color:var(--prep); background:var(--soft); box-shadow:0 0 0 2px var(--prep)}
   .tcard .ic{font-size:1.4rem; line-height:1}
-  .tcard .nm{font-weight:700; font-size:.92rem}
-  .tcard .df{font-size:.76rem; color:var(--muted); margin-top:2px}
+  .tcard .nm{font-weight:700; font-size:.92rem; display:block}
+  .tcard .df{font-size:.76rem; color:var(--muted); display:block; margin-top:5px}
   .tcard .check{margin-left:auto; color:var(--prep); font-weight:800; opacity:0}
   .tcard.on .check{opacity:1}
   .stub{font-size:.66rem; color:var(--reflect); font-weight:700; opacity:.8}
@@ -169,6 +169,9 @@
   .qnote label{font-size:.76rem; font-weight:700; color:var(--reflect); display:block; margin-bottom:5px}
   .qnote textarea{width:100%; border-radius:10px; padding:9px; font-size:.88rem; min-height:46px; resize:vertical; font-family:inherit}
   .phasehdr{font-size:.82rem; color:var(--muted); margin:2px 0 10px}
+  .qnav{display:flex; gap:10px; align-items:center; margin-top:14px; border-top:1px dashed var(--line); padding-top:12px}
+  .qnav .qpos{font-size:.74rem; color:var(--muted); margin:0 auto; text-align:center}
+  .badge.pos{background:var(--card-2); color:var(--reflect)}
   .srcbtn{background:none; color:var(--brand); font-size:.76rem; font-weight:700; text-decoration:underline; padding:2px 0}
   .src{display:none; font-size:.78rem; color:var(--muted); margin-top:6px; border-top:1px dashed var(--line); padding-top:6px}
   .src.show{display:block}
@@ -692,9 +695,9 @@ function renderBookends(){
 }
 
 /* ============ BOGEN (stepper + Phasen-Notizen) ============ */
-let cur={nr:null, step:0};
+let cur={nr:null, step:0, qi:{}};
 function openBogen(nr){
-  cur={nr, step:0}; const t=T(nr);
+  cur={nr, step:0, qi:{}}; const t=T(nr);
   document.getElementById('bogenTitle').textContent=`${t.ic} ${t.name}`;
   const np=document.getElementById('bogenNote');
   if(S.notes[nr]){ np.style.display='block'; np.innerHTML=`<div class="eyebrow">📝 Deine Live-Notiz</div>${escapeHtml(S.notes[nr])}`; }
@@ -720,39 +723,57 @@ function renderStep(){
   } else if(!qs.length){
     body.innerHTML=`<div class="empty">Für diese Phase sind hier (noch) keine Fragen hinterlegt.</div>`;
   } else {
+    // Fragen dieser Phase von leicht → mittel → tief sortieren
+    const TIEFE={leicht:0,mittel:1,tief:2};
+    qs.sort((a,b)=>(TIEFE[a.tiefe]??9)-(TIEFE[b.tiefe]??9));
+    // aktuelle Frage-Position dieser Phase (gemerkt beim Durchschalten)
+    if(cur.qi[ph.key]==null) cur.qi[ph.key]=0;
+    let idx=((cur.qi[ph.key]%qs.length)+qs.length)%qs.length;
+    cur.qi[ph.key]=idx;
+    const q=qs[idx];
+
     const intro=document.createElement('p'); intro.className='phasehdr';
-    intro.textContent='Such dir die Fragen aus, die zu dem passen, was du beobachtet hast – du musst nicht alle stellen. Tippe „+ gefragt", um eine Frage (mit Notiz) in die Team-Zusammenfassung zu nehmen.';
+    intro.innerHTML='Schalte mit „nächste Frage" durch die Fragen dieser Phase – sie sind von <b>leicht → tief</b> sortiert. Mit „+ gefragt" nimmst du die jeweils passende Frage (samt Notiz) in die Team-Zusammenfassung.';
     body.appendChild(intro);
-    qs.forEach(q=>{
-      const picked = !!S.qSel[q.id];
-      const d=document.createElement('div'); d.className=`q ${ph.key}`+(picked?' picked':'');
-      d.innerHTML=`
-        <div class="meta"><span class="pill" style="background:var(--soft);color:var(--muted)">${q.id}</span>
-          <span class="badge">Tiefe: ${q.tiefe}</span><span class="badge">${q.sf}</span>
-          <button class="pickbtn">${picked?'✓ gefragt':'+ gefragt'}</button></div>
-        <div class="qtext">„${q.frage}"</div>
-        ${q.hinweis?`<div class="hint">💡 ${q.hinweis}</div>`:''}
-        <button class="srcbtn">Quelle / Herkunft anzeigen</button>
-        <div class="src"><b>Herkunft (Methode):</b> ${q.fach}<br><b>Wissenschaftliche Quelle:</b> ${q.quelle==='—'?'— (keine Tatsachenbehauptung)':q.quelle}</div>
-        <div class="qnote" style="display:${picked?'block':'none'}">
-          <label>📝 Notiz zu dieser Frage – kommt in die Team-Zusammenfassung</label>
-          <textarea placeholder="Was wurde zu dieser Frage gesagt / beschlossen?">${escapeHtml(S.qNote[q.id]||'')}</textarea>
-        </div>`;
-      const sb=d.querySelector('.srcbtn'), sr=d.querySelector('.src');
-      sb.onclick=()=>{ sr.classList.toggle('show'); sb.textContent=sr.classList.contains('show')?'Quelle / Herkunft verbergen':'Quelle / Herkunft anzeigen'; };
-      const pb=d.querySelector('.pickbtn'), qn=d.querySelector('.qnote');
-      pb.onclick=()=>{
-        const now=!S.qSel[q.id];
-        if(now) S.qSel[q.id]=true; else delete S.qSel[q.id];
-        save();
-        d.classList.toggle('picked',now);
-        pb.textContent=now?'✓ gefragt':'+ gefragt';
-        qn.style.display=now?'block':'none';
-      };
-      const qta=qn.querySelector('textarea');
-      qta.oninput=()=>{ S.qNote[q.id]=qta.value; save(); };
-      body.appendChild(d);
-    });
+
+    const picked = !!S.qSel[q.id];
+    const d=document.createElement('div'); d.className=`q ${ph.key}`+(picked?' picked':'');
+    d.innerHTML=`
+      <div class="meta"><span class="pill" style="background:var(--soft);color:var(--muted)">${q.id}</span>
+        <span class="badge pos">Frage ${idx+1} / ${qs.length}</span>
+        <span class="badge">Tiefe: ${q.tiefe}</span><span class="badge">${q.sf}</span>
+        <button class="pickbtn">${picked?'✓ gefragt':'+ gefragt'}</button></div>
+      <div class="qtext">„${q.frage}"</div>
+      ${q.hinweis?`<div class="hint">💡 ${q.hinweis}</div>`:''}
+      <button class="srcbtn">Quelle / Herkunft anzeigen</button>
+      <div class="src"><b>Herkunft (Methode):</b> ${q.fach}<br><b>Wissenschaftliche Quelle:</b> ${q.quelle==='—'?'— (keine Tatsachenbehauptung)':q.quelle}</div>
+      <div class="qnote" style="display:${picked?'block':'none'}">
+        <label>📝 Notiz zu dieser Frage – kommt in die Team-Zusammenfassung</label>
+        <textarea placeholder="Was wurde zu dieser Frage gesagt / beschlossen?">${escapeHtml(S.qNote[q.id]||'')}</textarea>
+      </div>
+      ${qs.length>1?`<div class="qnav">
+        <button class="btn ghost sm" id="qPrev">← leichter</button>
+        <span class="qpos">Tiefe steigt: leicht → tief</span>
+        <button class="btn sm" id="qNext">nächste Frage ↻</button>
+      </div>`:''}`;
+    const sb=d.querySelector('.srcbtn'), sr=d.querySelector('.src');
+    sb.onclick=()=>{ sr.classList.toggle('show'); sb.textContent=sr.classList.contains('show')?'Quelle / Herkunft verbergen':'Quelle / Herkunft anzeigen'; };
+    const pb=d.querySelector('.pickbtn'), qn=d.querySelector('.qnote');
+    pb.onclick=()=>{
+      const now=!S.qSel[q.id];
+      if(now) S.qSel[q.id]=true; else delete S.qSel[q.id];
+      save();
+      d.classList.toggle('picked',now);
+      pb.textContent=now?'✓ gefragt':'+ gefragt';
+      qn.style.display=now?'block':'none';
+    };
+    const qta=qn.querySelector('textarea');
+    qta.oninput=()=>{ S.qNote[q.id]=qta.value; save(); };
+    if(qs.length>1){
+      d.querySelector('#qPrev').onclick=()=>{ cur.qi[ph.key]=idx-1; renderStep(); };
+      d.querySelector('#qNext').onclick=()=>{ cur.qi[ph.key]=idx+1; renderStep(); };
+    }
+    body.appendChild(d);
   }
 
   const prev=document.getElementById('prevStep'), next=document.getElementById('nextStep');
